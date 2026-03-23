@@ -13,10 +13,24 @@
     "purchasing": "Mua hàng",
     "purchaseRequest": "Yêu cầu mua hàng",
     "purchaseOrder": "Đơn mua hàng",
+    "partners": "Đối tác",
+    "customers": "Khách hàng",
+    "suppliers": "Nhà cung cấp",
+    "materials": "Nguyên vật liệu",
     "warehouse": "Kho vật tư",
+    "materialGroups": "Nhóm nguyên liệu",
+    "materialList": "Danh sách nguyên liệu",
+    "materialAliases": "Bí danh nhập liệu",
+    "undefinedMaterials": "Chưa định nghĩa",
+    "materialUnits": "Đơn vị tính",
+    "productsMenu": "Sản phẩm",
+    "finishedGoods": "Kho thành phẩm",
+    "productGroups": "Nhóm sản phẩm",
+    "productList": "Danh sách sản phẩm",
+    "productUnits": "Đơn vị tính",
+    "operations": "Vận hành",
     "production": "Sản xuất",
     "qc": "Kiểm tra CL",
-    "finishedGoods": "Kho thành phẩm",
     "settings": "Cài đặt"
   },
   "common": {
@@ -143,6 +157,93 @@
       "totalAmount": "Tổng tiền",
       "date": "Ngày tạo",
       "status": "Trạng thái"
+    }
+  },
+  "partners": {
+    "customers": {
+      "title": "Khách hàng",
+      "code": "Mã KH",
+      "name": "Tên khách hàng",
+      "contact": "Người liên hệ",
+      "phone": "Điện thoại",
+      "email": "Email",
+      "address": "Địa chỉ",
+      "taxCode": "Mã số thuế"
+    },
+    "suppliers": {
+      "title": "Nhà cung cấp",
+      "code": "Mã NCC",
+      "name": "Tên nhà cung cấp",
+      "contact": "Người liên hệ",
+      "phone": "Điện thoại",
+      "email": "Email",
+      "address": "Địa chỉ",
+      "taxCode": "Mã số thuế"
+    }
+  },
+  "materials": {
+    "groups": {
+      "title": "Nhóm nguyên liệu",
+      "code": "Mã nhóm",
+      "name": "Tên nhóm",
+      "description": "Mô tả",
+      "itemCount": "Số lượng NVL"
+    },
+    "list": {
+      "title": "Danh sách nguyên liệu",
+      "code": "Mã NVL",
+      "name": "Tên nguyên liệu",
+      "group": "Nhóm",
+      "specification": "Quy cách",
+      "unit": "ĐVT",
+      "price": "Đơn giá"
+    },
+    "aliases": {
+      "title": "Bí danh nhập liệu",
+      "alias": "Bí danh",
+      "materialCode": "Mã NVL",
+      "materialName": "Tên NVL gốc",
+      "source": "Nguồn"
+    },
+    "undefined": {
+      "title": "NVL chưa định nghĩa",
+      "name": "Tên NVL",
+      "specification": "Quy cách",
+      "source": "Nguồn tạo",
+      "createdDate": "Ngày tạo",
+      "link": "Liên kết"
+    },
+    "units": {
+      "title": "Đơn vị tính (NVL)",
+      "code": "Mã ĐVT",
+      "name": "Tên ĐVT",
+      "symbol": "Ký hiệu",
+      "description": "Mô tả"
+    }
+  },
+  "products": {
+    "groups": {
+      "title": "Nhóm sản phẩm",
+      "code": "Mã nhóm",
+      "name": "Tên nhóm",
+      "description": "Mô tả",
+      "itemCount": "Số sản phẩm"
+    },
+    "list": {
+      "title": "Danh sách sản phẩm",
+      "code": "Mã SP",
+      "name": "Tên sản phẩm",
+      "group": "Nhóm",
+      "specification": "Quy cách",
+      "unit": "ĐVT",
+      "price": "Đơn giá"
+    },
+    "units": {
+      "title": "Đơn vị tính (SP)",
+      "code": "Mã ĐVT",
+      "name": "Tên ĐVT",
+      "symbol": "Ký hiệu",
+      "description": "Mô tả"
     }
   },
   "warehouse": {
