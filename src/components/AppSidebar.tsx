@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, ShoppingCart, FileText, Layers, ShoppingBag, Package,
-  Factory, ClipboardCheck, Archive, Settings, ChevronDown
+  Factory, ClipboardCheck, Archive, Settings, ChevronDown, Users, Truck,
+  Boxes, List, Tag, HelpCircle, Ruler, Box, PackageOpen
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -37,11 +38,30 @@ export function AppSidebar() {
     { title: t('nav.purchaseOrder'), url: '/purchase-orders', icon: ShoppingBag },
   ];
 
-  const operationItems = [
+  const partnerItems = [
+    { title: t('nav.customers'), url: '/customers', icon: Users },
+    { title: t('nav.suppliers'), url: '/suppliers', icon: Truck },
+  ];
+
+  const materialItems = [
     { title: t('nav.warehouse'), url: '/warehouse', icon: Package },
+    { title: t('nav.materialGroups'), url: '/material-groups', icon: Boxes },
+    { title: t('nav.materialList'), url: '/material-list', icon: List },
+    { title: t('nav.materialAliases'), url: '/material-aliases', icon: Tag },
+    { title: t('nav.undefinedMaterials'), url: '/undefined-materials', icon: HelpCircle },
+    { title: t('nav.materialUnits'), url: '/material-units', icon: Ruler },
+  ];
+
+  const productItems = [
+    { title: t('nav.finishedGoods'), url: '/finished-goods', icon: PackageOpen },
+    { title: t('nav.productGroups'), url: '/product-groups', icon: Box },
+    { title: t('nav.productList'), url: '/product-list', icon: List },
+    { title: t('nav.productUnits'), url: '/product-units', icon: Ruler },
+  ];
+
+  const operationItems = [
     { title: t('nav.production'), url: '/production', icon: Factory },
     { title: t('nav.qc'), url: '/qc', icon: ClipboardCheck },
-    { title: t('nav.finishedGoods'), url: '/finished-goods', icon: Archive },
   ];
 
   const renderItems = (items: typeof mainItems) => (
@@ -112,7 +132,10 @@ export function AppSidebar() {
         {renderGroup(t('nav.orders'), orderItems, true)}
         {renderGroup(t('nav.bom'), bomItems, true)}
         {renderGroup(t('nav.purchasing'), purchasingItems)}
-        {renderGroup('Operations', operationItems)}
+        {renderGroup(t('nav.partners'), partnerItems)}
+        {renderGroup(t('nav.materials'), materialItems)}
+        {renderGroup(t('nav.productsMenu'), productItems)}
+        {renderGroup(t('nav.operations'), operationItems)}
       </SidebarContent>
       <SidebarFooter className="px-2 pb-4">
         {renderItems([{ title: t('nav.settings'), url: '/settings', icon: Settings }])}

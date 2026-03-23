@@ -14,6 +14,16 @@ import ProductionPage from "@/pages/Production";
 import QCPage from "@/pages/QC";
 import FinishedGoodsPage from "@/pages/FinishedGoods";
 import SettingsPage from "@/pages/Settings";
+import CustomersPage from "@/pages/Customers";
+import SuppliersPage from "@/pages/Suppliers";
+import MaterialGroupsPage from "@/pages/MaterialGroups";
+import MaterialListPage from "@/pages/MaterialList";
+import MaterialAliasesPage from "@/pages/MaterialAliases";
+import UndefinedMaterialsPage from "@/pages/UndefinedMaterials";
+import MaterialUnitsPage from "@/pages/MaterialUnits";
+import ProductGroupsPage from "@/pages/ProductGroups";
+import ProductListPage from "@/pages/ProductList";
+import ProductUnitsPage from "@/pages/ProductUnits";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +45,16 @@ const App = () => (
             <Route path="/production" element={<ProductionPage />} />
             <Route path="/qc" element={<QCPage />} />
             <Route path="/finished-goods" element={<FinishedGoodsPage />} />
+            <Route path="/customers" element={<CustomersPage />} />
+            <Route path="/suppliers" element={<SuppliersPage />} />
+            <Route path="/material-groups" element={<MaterialGroupsPage />} />
+            <Route path="/material-list" element={<MaterialListPage />} />
+            <Route path="/material-aliases" element={<MaterialAliasesPage />} />
+            <Route path="/undefined-materials" element={<UndefinedMaterialsPage />} />
+            <Route path="/material-units" element={<MaterialUnitsPage />} />
+            <Route path="/product-groups" element={<ProductGroupsPage />} />
+            <Route path="/product-list" element={<ProductListPage />} />
+            <Route path="/product-units" element={<ProductUnitsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />

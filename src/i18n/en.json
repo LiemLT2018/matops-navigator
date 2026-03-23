@@ -13,10 +13,24 @@
     "purchasing": "Purchasing",
     "purchaseRequest": "Purchase Request",
     "purchaseOrder": "Purchase Order",
+    "partners": "Partners",
+    "customers": "Customers",
+    "suppliers": "Suppliers",
+    "materials": "Materials",
     "warehouse": "Warehouse",
+    "materialGroups": "Material Groups",
+    "materialList": "Material List",
+    "materialAliases": "Input Aliases",
+    "undefinedMaterials": "Undefined",
+    "materialUnits": "Units of Measure",
+    "productsMenu": "Products",
+    "finishedGoods": "Finished Goods",
+    "productGroups": "Product Groups",
+    "productList": "Product List",
+    "productUnits": "Units of Measure",
+    "operations": "Operations",
     "production": "Production",
     "qc": "Quality Control",
-    "finishedGoods": "Finished Goods",
     "settings": "Settings"
   },
   "common": {
@@ -143,6 +157,93 @@
       "totalAmount": "Total Amount",
       "date": "Date",
       "status": "Status"
+    }
+  },
+  "partners": {
+    "customers": {
+      "title": "Customers",
+      "code": "Code",
+      "name": "Customer Name",
+      "contact": "Contact Person",
+      "phone": "Phone",
+      "email": "Email",
+      "address": "Address",
+      "taxCode": "Tax Code"
+    },
+    "suppliers": {
+      "title": "Suppliers",
+      "code": "Code",
+      "name": "Supplier Name",
+      "contact": "Contact Person",
+      "phone": "Phone",
+      "email": "Email",
+      "address": "Address",
+      "taxCode": "Tax Code"
+    }
+  },
+  "materials": {
+    "groups": {
+      "title": "Material Groups",
+      "code": "Group Code",
+      "name": "Group Name",
+      "description": "Description",
+      "itemCount": "Items"
+    },
+    "list": {
+      "title": "Material List",
+      "code": "Material Code",
+      "name": "Material Name",
+      "group": "Group",
+      "specification": "Specification",
+      "unit": "Unit",
+      "price": "Unit Price"
+    },
+    "aliases": {
+      "title": "Input Aliases",
+      "alias": "Alias",
+      "materialCode": "Material Code",
+      "materialName": "Original Name",
+      "source": "Source"
+    },
+    "undefined": {
+      "title": "Undefined Materials",
+      "name": "Name",
+      "specification": "Specification",
+      "source": "Source",
+      "createdDate": "Created",
+      "link": "Link"
+    },
+    "units": {
+      "title": "Units of Measure (Materials)",
+      "code": "Code",
+      "name": "Name",
+      "symbol": "Symbol",
+      "description": "Description"
+    }
+  },
+  "products": {
+    "groups": {
+      "title": "Product Groups",
+      "code": "Group Code",
+      "name": "Group Name",
+      "description": "Description",
+      "itemCount": "Products"
+    },
+    "list": {
+      "title": "Product List",
+      "code": "Product Code",
+      "name": "Product Name",
+      "group": "Group",
+      "specification": "Specification",
+      "unit": "Unit",
+      "price": "Unit Price"
+    },
+    "units": {
+      "title": "Units of Measure (Products)",
+      "code": "Code",
+      "name": "Name",
+      "symbol": "Symbol",
+      "description": "Description"
     }
   },
   "warehouse": {
