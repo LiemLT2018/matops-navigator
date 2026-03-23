@@ -1,0 +1,210 @@
+{
+  "app": {
+    "name": "MatOps Platform",
+    "tagline": "Control Material & Manufacturing in Real-Time"
+  },
+  "nav": {
+    "dashboard": "Tổng quan",
+    "orders": "Đơn hàng",
+    "salesOrder": "Đơn bán hàng",
+    "productOrder": "Đơn sản xuất",
+    "bom": "BOM",
+    "bomManagement": "Quản lý BOM",
+    "purchasing": "Mua hàng",
+    "purchaseRequest": "Yêu cầu mua hàng",
+    "purchaseOrder": "Đơn mua hàng",
+    "warehouse": "Kho vật tư",
+    "production": "Sản xuất",
+    "qc": "Kiểm tra CL",
+    "finishedGoods": "Kho thành phẩm",
+    "settings": "Cài đặt"
+  },
+  "common": {
+    "search": "Tìm kiếm",
+    "filter": "Lọc",
+    "create": "Tạo mới",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "confirm": "Xác nhận",
+    "close": "Đóng",
+    "export": "Xuất",
+    "import": "Nhập",
+    "status": "Trạng thái",
+    "actions": "Thao tác",
+    "total": "Tổng",
+    "loading": "Đang tải...",
+    "noData": "Không có dữ liệu",
+    "page": "Trang",
+    "of": "trên",
+    "rows": "dòng",
+    "from": "Từ",
+    "to": "Đến",
+    "all": "Tất cả",
+    "yes": "Có",
+    "no": "Không",
+    "pending": "Chờ xử lý",
+    "inProgress": "Đang xử lý",
+    "completed": "Hoàn thành",
+    "cancelled": "Đã hủy",
+    "approved": "Đã duyệt",
+    "rejected": "Từ chối",
+    "draft": "Nháp"
+  },
+  "datePreset": {
+    "today": "Hôm nay",
+    "yesterday": "Hôm qua",
+    "this_week": "Tuần này",
+    "last_week": "Tuần trước",
+    "7_days": "7 ngày qua",
+    "this_month": "Tháng này",
+    "last_month": "Tháng trước",
+    "this_year": "Năm nay",
+    "last_year": "Năm trước"
+  },
+  "dashboard": {
+    "title": "Tổng quan",
+    "kpi": {
+      "totalSO": "Tổng đơn bán hàng",
+      "totalBOM": "BOM thiết kế",
+      "totalPO": "Đơn mua hàng",
+      "totalProd": "Lệnh sản xuất"
+    },
+    "warnings": "Cảnh báo",
+    "planVsActual": "Kế hoạch vs Thực tế",
+    "warningTypes": {
+      "materialShortage": "Thiếu hụt vật tư",
+      "lateDelivery": "Chậm trả đơn",
+      "lateDesign": "Chậm thiết kế",
+      "latePR": "PR về chậm"
+    }
+  },
+  "orders": {
+    "salesOrder": {
+      "title": "Đơn bán hàng (Sales Order)",
+      "code": "Mã SO",
+      "customer": "Khách hàng",
+      "orderDate": "Ngày đặt",
+      "deliveryDate": "Ngày giao",
+      "amount": "Giá trị",
+      "status": "Trạng thái"
+    },
+    "productOrder": {
+      "title": "Đơn sản xuất (Product Order)",
+      "code": "Mã PO",
+      "soRef": "Tham chiếu SO",
+      "product": "Sản phẩm",
+      "quantity": "Số lượng",
+      "dueDate": "Hạn hoàn thành",
+      "status": "Trạng thái"
+    }
+  },
+  "bom": {
+    "title": "Quản lý BOM",
+    "code": "Mã BOM",
+    "product": "Sản phẩm",
+    "customer": "Khách hàng",
+    "version": "Phiên bản",
+    "status": "Trạng thái",
+    "detail": "Chi tiết BOM",
+    "importExcel": "Nhập từ Excel",
+    "viewMode": "Chế độ xem",
+    "masterView": "BOM Master",
+    "listView": "Danh sách",
+    "materialCode": "Mã vật tư",
+    "materialName": "Tên vật tư",
+    "specification": "Quy cách",
+    "unit": "ĐVT",
+    "quantity": "Số lượng",
+    "note": "Ghi chú"
+  },
+  "purchasing": {
+    "request": {
+      "title": "Yêu cầu mua hàng (Purchase Request)",
+      "code": "Mã PR",
+      "requester": "Người yêu cầu",
+      "department": "Bộ phận",
+      "date": "Ngày tạo",
+      "bomRef": "Tham chiếu BOM",
+      "status": "Trạng thái",
+      "supplier": "NCC đề xuất",
+      "stockQty": "Tồn kho",
+      "requestQty": "SL cần mua",
+      "addItem": "Thêm vật tư",
+      "newItem": "Vật tư mới (chưa khai báo)"
+    },
+    "order": {
+      "title": "Đơn mua hàng (Purchase Order)",
+      "code": "Mã PO",
+      "prRef": "Tham chiếu PR",
+      "supplier": "Nhà cung cấp",
+      "unitPrice": "Đơn giá",
+      "totalAmount": "Tổng tiền",
+      "date": "Ngày tạo",
+      "status": "Trạng thái"
+    }
+  },
+  "warehouse": {
+    "title": "Kho vật tư",
+    "materialCode": "Mã vật tư",
+    "materialName": "Tên vật tư",
+    "currentStock": "Tồn kho",
+    "minStock": "Tồn tối thiểu",
+    "unit": "ĐVT",
+    "location": "Vị trí",
+    "inbound": "Nhập kho",
+    "outbound": "Xuất kho",
+    "history": "Lịch sử",
+    "lowStockWarning": "Cảnh báo tồn kho thấp"
+  },
+  "production": {
+    "title": "Quản lý sản xuất",
+    "orderCode": "Mã LSX",
+    "product": "Sản phẩm",
+    "quantity": "Số lượng",
+    "startDate": "Ngày bắt đầu",
+    "endDate": "Ngày kết thúc",
+    "progress": "Tiến độ",
+    "stage": "Công đoạn",
+    "assignee": "Phân công",
+    "status": "Trạng thái"
+  },
+  "qc": {
+    "title": "Kiểm tra chất lượng",
+    "inspectionCode": "Mã phiếu KT",
+    "product": "Sản phẩm",
+    "inspector": "Người kiểm tra",
+    "date": "Ngày kiểm tra",
+    "criteria": "Tiêu chí",
+    "result": "Kết quả",
+    "pass": "Đạt",
+    "fail": "Không đạt",
+    "notes": "Ghi chú"
+  },
+  "finishedGoods": {
+    "title": "Kho thành phẩm",
+    "productCode": "Mã thành phẩm",
+    "productName": "Tên thành phẩm",
+    "currentStock": "Tồn kho",
+    "inbound": "Nhập kho",
+    "outbound": "Xuất kho",
+    "soRef": "Tham chiếu SO"
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "baseUrl": "BASE_URL",
+    "dpsCert": "DPS_CERT",
+    "language": "Ngôn ngữ",
+    "theme": "Giao diện",
+    "dark": "Tối",
+    "light": "Sáng"
+  },
+  "errors": {
+    "system": "Lỗi hệ thống",
+    "success": "Thành công",
+    "failed": "Thất bại",
+    "unauthorized": "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.",
+    "undefined": "Lỗi chưa định nghĩa: {{message}}"
+  }
+}

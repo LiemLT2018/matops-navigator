@@ -1,0 +1,210 @@
+{
+  "app": {
+    "name": "MatOps Platform",
+    "tagline": "Control Material & Manufacturing in Real-Time"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "orders": "Orders",
+    "salesOrder": "Sales Order",
+    "productOrder": "Product Order",
+    "bom": "BOM",
+    "bomManagement": "BOM Management",
+    "purchasing": "Purchasing",
+    "purchaseRequest": "Purchase Request",
+    "purchaseOrder": "Purchase Order",
+    "warehouse": "Warehouse",
+    "production": "Production",
+    "qc": "Quality Control",
+    "finishedGoods": "Finished Goods",
+    "settings": "Settings"
+  },
+  "common": {
+    "search": "Search",
+    "filter": "Filter",
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "export": "Export",
+    "import": "Import",
+    "status": "Status",
+    "actions": "Actions",
+    "total": "Total",
+    "loading": "Loading...",
+    "noData": "No data",
+    "page": "Page",
+    "of": "of",
+    "rows": "rows",
+    "from": "From",
+    "to": "To",
+    "all": "All",
+    "yes": "Yes",
+    "no": "No",
+    "pending": "Pending",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "draft": "Draft"
+  },
+  "datePreset": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "this_week": "This week",
+    "last_week": "Last week",
+    "7_days": "Last 7 days",
+    "this_month": "This month",
+    "last_month": "Last month",
+    "this_year": "This year",
+    "last_year": "Last year"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "kpi": {
+      "totalSO": "Total Sales Orders",
+      "totalBOM": "BOM Designs",
+      "totalPO": "Purchase Orders",
+      "totalProd": "Production Orders"
+    },
+    "warnings": "Warnings",
+    "planVsActual": "Plan vs Actual",
+    "warningTypes": {
+      "materialShortage": "Material Shortage",
+      "lateDelivery": "Late Delivery",
+      "lateDesign": "Late Design",
+      "latePR": "Late PR"
+    }
+  },
+  "orders": {
+    "salesOrder": {
+      "title": "Sales Order",
+      "code": "SO Code",
+      "customer": "Customer",
+      "orderDate": "Order Date",
+      "deliveryDate": "Delivery Date",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "productOrder": {
+      "title": "Product Order",
+      "code": "PO Code",
+      "soRef": "SO Reference",
+      "product": "Product",
+      "quantity": "Quantity",
+      "dueDate": "Due Date",
+      "status": "Status"
+    }
+  },
+  "bom": {
+    "title": "BOM Management",
+    "code": "BOM Code",
+    "product": "Product",
+    "customer": "Customer",
+    "version": "Version",
+    "status": "Status",
+    "detail": "BOM Detail",
+    "importExcel": "Import from Excel",
+    "viewMode": "View Mode",
+    "masterView": "BOM Master",
+    "listView": "List View",
+    "materialCode": "Material Code",
+    "materialName": "Material Name",
+    "specification": "Specification",
+    "unit": "Unit",
+    "quantity": "Quantity",
+    "note": "Note"
+  },
+  "purchasing": {
+    "request": {
+      "title": "Purchase Request",
+      "code": "PR Code",
+      "requester": "Requester",
+      "department": "Department",
+      "date": "Date",
+      "bomRef": "BOM Reference",
+      "status": "Status",
+      "supplier": "Suggested Supplier",
+      "stockQty": "Stock Qty",
+      "requestQty": "Request Qty",
+      "addItem": "Add Material",
+      "newItem": "New Material (undeclared)"
+    },
+    "order": {
+      "title": "Purchase Order",
+      "code": "PO Code",
+      "prRef": "PR Reference",
+      "supplier": "Supplier",
+      "unitPrice": "Unit Price",
+      "totalAmount": "Total Amount",
+      "date": "Date",
+      "status": "Status"
+    }
+  },
+  "warehouse": {
+    "title": "Warehouse",
+    "materialCode": "Material Code",
+    "materialName": "Material Name",
+    "currentStock": "Current Stock",
+    "minStock": "Min Stock",
+    "unit": "Unit",
+    "location": "Location",
+    "inbound": "Inbound",
+    "outbound": "Outbound",
+    "history": "History",
+    "lowStockWarning": "Low Stock Warning"
+  },
+  "production": {
+    "title": "Production Management",
+    "orderCode": "Prod. Code",
+    "product": "Product",
+    "quantity": "Quantity",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "progress": "Progress",
+    "stage": "Stage",
+    "assignee": "Assignee",
+    "status": "Status"
+  },
+  "qc": {
+    "title": "Quality Control",
+    "inspectionCode": "Inspection Code",
+    "product": "Product",
+    "inspector": "Inspector",
+    "date": "Date",
+    "criteria": "Criteria",
+    "result": "Result",
+    "pass": "Pass",
+    "fail": "Fail",
+    "notes": "Notes"
+  },
+  "finishedGoods": {
+    "title": "Finished Goods",
+    "productCode": "Product Code",
+    "productName": "Product Name",
+    "currentStock": "Current Stock",
+    "inbound": "Inbound",
+    "outbound": "Outbound",
+    "soRef": "SO Reference"
+  },
+  "settings": {
+    "title": "Settings",
+    "baseUrl": "BASE_URL",
+    "dpsCert": "DPS_CERT",
+    "language": "Language",
+    "theme": "Theme",
+    "dark": "Dark",
+    "light": "Light"
+  },
+  "errors": {
+    "system": "System error",
+    "success": "Success",
+    "failed": "Failed",
+    "unauthorized": "Session expired. Please login again.",
+    "undefined": "Undefined error: {{message}}"
+  }
+}
