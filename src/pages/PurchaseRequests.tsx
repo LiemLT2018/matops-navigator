@@ -422,7 +422,7 @@ export default function PurchaseRequestsPage() {
                       <span className="text-sm">{row.lastSupplier || '—'}</span>
                     </TableCell>
                     <TableCell className="p-1 text-right">
-                      <span className="text-sm font-mono">{row.lastPrice !== null ? formatCurrency(row.lastPrice) : '—'}</span>
+                      <span className="text-sm font-mono">{row.quantity && row.estimatedPrice ? formatCurrency(Number(row.quantity) * Number(row.estimatedPrice)) : '—'}</span>
                     </TableCell>
                     <TableCell className="p-1">
                       <Input value={row.note}
