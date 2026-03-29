@@ -14,6 +14,8 @@ import { getBOMs, getBOMDetail, getBOMChildRefs, searchMaterials, searchBOMs, ty
 import { Plus, Search, ChevronDown, ChevronRight, Upload, LayoutGrid, List, Edit, Copy, Trash2, Download, X, Save } from 'lucide-react';
 import type { DatePresetKey } from '@/types/api';
 import { toast } from 'sonner';
+import { SuggestInputText } from '@/components/SuggestInputText';
+import type { SuggestData } from '@/api/suggestApi';
 
 type DateFilter = DatePresetKey | 'all';
 
@@ -29,38 +31,7 @@ const emptyMaterial = (): FormMaterial => ({ _key: crypto.randomUUID(), material
 
 const removeViDiacritics = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
 
-// Suggest dropdown component
-function SuggestInput({ value, onChange, onSelect, suggestions, placeholder, disabled }: {
-  value: string; onChange: (v: string) => void; onSelect: (item: MaterialSuggest) => void;
-  suggestions: MaterialSuggest[]; placeholder?: string; disabled?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <Input value={value} onChange={e => { onChange(e.target.value); setOpen(true); }} onFocus={() => value && setOpen(true)}
-        placeholder={placeholder} disabled={disabled} className="h-8 text-sm" />
-      {open && suggestions.length > 0 && (
-        <div className="absolute z-50 top-full left-0 w-full max-h-48 overflow-auto bg-popover border border-border rounded-md shadow-lg mt-1">
-          {suggestions.map(s => (
-            <div key={s.id} className="px-3 py-2 text-sm hover:bg-accent cursor-pointer flex flex-col"
-              onClick={() => { onSelect(s); setOpen(false); }}>
-              <span className="font-medium">{s.name}</span>
-              <span className="text-xs text-muted-foreground">{s.code} — {s.specification} — {s.manufacturer}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// Old SuggestInput removed — now using SuggestInputText component
 
 function BOMSuggestInput({ value, onChange, onSelect, suggestions, placeholder }: {
   value: string; onChange: (v: string) => void; onSelect: (item: BOMMaster) => void;
@@ -117,8 +88,7 @@ export default function BOMPage() {
   const [formChildBOMs, setFormChildBOMs] = useState<FormChildBOM[]>([emptyChildBOM()]);
   const [formMaterials, setFormMaterials] = useState<FormMaterial[]>([emptyMaterial()]);
 
-  // Suggest states
-  const [matSuggestions, setMatSuggestions] = useState<Record<string, MaterialSuggest[]>>({});
+  // Suggest states (kept for BOM suggest only)
   const [bomSuggestions, setBomSuggestions] = useState<Record<string, BOMMaster[]>>({});
 
   const loadData = useCallback(async () => {
@@ -174,31 +144,25 @@ export default function BOMPage() {
     setEditingBOM(null);
   };
 
-  // Material suggest handler
-  const handleMatNameChange = async (key: string, value: string, index: number) => {
+  // Material suggest handler using SuggestInputText callbacks
+  const handleMatFieldChange = (index: number, field: keyof FormMaterial, value: string) => {
     const updated = [...formMaterials];
-    updated[index] = { ...updated[index], materialName: value, materialCode: '' };
-    setFormMaterials(updated);
-    if (value.length >= 1) {
-      const res = await searchMaterials(value);
-      setMatSuggestions(prev => ({ ...prev, [key]: res.data }));
-      // Auto-select exact match
-      const norm = removeViDiacritics(value);
-      const exact = res.data.find(m => removeViDiacritics(m.name) === norm);
-      if (exact) {
-        updated[index] = { ...updated[index], materialCode: exact.code, materialName: exact.name, specification: exact.specification, unit: exact.unit, manufacturer: exact.manufacturer };
-        setFormMaterials([...updated]);
-      }
-    } else {
-      setMatSuggestions(prev => ({ ...prev, [key]: [] }));
+    updated[index] = { ...updated[index], [field]: value };
+    // Clear materialCode when name changes manually
+    if (field === 'materialName') {
+      updated[index].materialCode = '';
     }
+    setFormMaterials(updated);
   };
 
-  const handleMatSelect = (key: string, mat: MaterialSuggest, index: number) => {
+  const handleMatSuggestSelect = (index: number, field: keyof FormMaterial, item: SuggestData) => {
     const updated = [...formMaterials];
-    updated[index] = { ...updated[index], materialCode: mat.code, materialName: mat.name, specification: mat.specification, unit: mat.unit, manufacturer: mat.manufacturer };
+    if (field === 'materialName') {
+      updated[index] = { ...updated[index], materialName: item.name, materialCode: item.uuid };
+    } else {
+      updated[index] = { ...updated[index], [field]: item.name };
+    }
     setFormMaterials(updated);
-    setMatSuggestions(prev => ({ ...prev, [key]: [] }));
   };
 
   // BOM suggest handler
@@ -400,30 +364,31 @@ export default function BOMPage() {
                   <TableRow key={row._key}>
                     <TableCell className="p-1"><Input value={row.materialCode} disabled className="h-8 text-sm font-mono bg-muted/50" /></TableCell>
                     <TableCell className="p-1">
-                      <SuggestInput value={row.materialName} onChange={v => handleMatNameChange(row._key, v, i)}
-                        onSelect={m => handleMatSelect(row._key, m, i)} suggestions={matSuggestions[row._key] || []}
-                        placeholder={t('bom.materialName')} />
+                      <SuggestInputText value={row.materialName} selectedUuid={row.materialCode}
+                        onChange={v => handleMatFieldChange(i, 'materialName', v)}
+                        onSelect={item => handleMatSuggestSelect(i, 'materialName', item)}
+                        type="material" placeholder={t('bom.materialName')} />
                     </TableCell>
                     <TableCell className="p-1">
-                      <SuggestInput value={row.specification}
-                        onChange={v => { const u = [...formMaterials]; u[i] = { ...u[i], specification: v }; setFormMaterials(u); }}
-                        onSelect={m => handleMatSelect(row._key, m, i)} suggestions={matSuggestions[row._key] || []}
-                        placeholder={t('bom.specification')} />
+                      <SuggestInputText value={row.specification}
+                        onChange={v => handleMatFieldChange(i, 'specification', v)}
+                        onSelect={item => handleMatSuggestSelect(i, 'specification', item)}
+                        type="specification" placeholder={t('bom.specification')} />
                     </TableCell>
                     <TableCell className="p-1">
-                      <SuggestInput value={row.unit}
-                        onChange={v => { const u = [...formMaterials]; u[i] = { ...u[i], unit: v }; setFormMaterials(u); }}
-                        onSelect={m => handleMatSelect(row._key, m, i)} suggestions={matSuggestions[row._key] || []}
-                        placeholder={t('bom.unit')} />
+                      <SuggestInputText value={row.unit}
+                        onChange={v => handleMatFieldChange(i, 'unit', v)}
+                        onSelect={item => handleMatSuggestSelect(i, 'unit', item)}
+                        type="unit" placeholder={t('bom.unit')} />
                     </TableCell>
                     <TableCell className="p-1">
                       <Input type="number" value={row.quantity} onChange={e => { const u = [...formMaterials]; u[i] = { ...u[i], quantity: e.target.value }; setFormMaterials(u); }} className="h-8 text-sm" />
                     </TableCell>
                     <TableCell className="p-1">
-                      <SuggestInput value={row.manufacturer}
-                        onChange={v => { const u = [...formMaterials]; u[i] = { ...u[i], manufacturer: v }; setFormMaterials(u); }}
-                        onSelect={m => handleMatSelect(row._key, m, i)} suggestions={matSuggestions[row._key] || []}
-                        placeholder={t('bom.manufacturer')} />
+                      <SuggestInputText value={row.manufacturer}
+                        onChange={v => handleMatFieldChange(i, 'manufacturer', v)}
+                        onSelect={item => handleMatSuggestSelect(i, 'manufacturer', item)}
+                        type="manufacturer" placeholder={t('bom.manufacturer')} />
                     </TableCell>
                     <TableCell className="p-1">
                       <Input value={row.note} onChange={e => { const u = [...formMaterials]; u[i] = { ...u[i], note: e.target.value }; setFormMaterials(u); }} className="h-8 text-sm" />
