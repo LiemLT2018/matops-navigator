@@ -165,6 +165,42 @@ export default function BOMPage() {
     setFormMaterials([...formMaterials, emptyMaterial()]);
   };
 
+  const handleChildBOMLastFieldTab = useCallback((index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Tab' && !e.shiftKey && index === formChildBOMs.length - 1) {
+      if (isChildBOMRowComplete(formChildBOMs[index])) {
+        e.preventDefault();
+        setFormChildBOMs(prev => [...prev, emptyChildBOM()]);
+        setTimeout(() => {
+          const table = document.querySelector('[data-bom-child-table]');
+          if (table) {
+            const rows = table.querySelectorAll('tbody tr');
+            const lastRow = rows[rows.length - 1];
+            const firstInput = lastRow?.querySelector('input:not([disabled])');
+            if (firstInput) (firstInput as HTMLElement).focus();
+          }
+        }, 50);
+      }
+    }
+  }, [formChildBOMs]);
+
+  const handleMaterialLastFieldTab = useCallback((index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Tab' && !e.shiftKey && index === formMaterials.length - 1) {
+      if (isMaterialRowComplete(formMaterials[index])) {
+        e.preventDefault();
+        setFormMaterials(prev => [...prev, emptyMaterial()]);
+        setTimeout(() => {
+          const table = document.querySelector('[data-bom-material-table]');
+          if (table) {
+            const rows = table.querySelectorAll('tbody tr');
+            const lastRow = rows[rows.length - 1];
+            const firstInput = lastRow?.querySelector('input:not([disabled])');
+            if (firstInput) (firstInput as HTMLElement).focus();
+          }
+        }, 50);
+      }
+    }
+  }, [formMaterials]);
+
   const statuses = ['all', 'draft', 'pending', 'in_progress', 'approved', 'completed'];
 
   const renderBOMDetailTable = (details: BOMDetail[], childRefs: BOMChildRef[]) => (
