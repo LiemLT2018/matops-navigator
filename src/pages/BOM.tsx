@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DatePresetSelect } from '@/components/DatePresetSelect';
 import { NumberDisplay } from '@/components/NumberDisplay';
-import { getBOMs, getBOMDetail, getBOMChildRefs, searchMaterials, searchBOMs, type BOMMaster, type BOMDetail, type BOMChildRef, type MaterialSuggest } from '@/api/mockApi';
+import { getBOMs, getBOMDetail, getBOMChildRefs, type BOMMaster, type BOMDetail, type BOMChildRef } from '@/api/mockApi';
 import { Plus, Search, ChevronDown, ChevronRight, Upload, LayoutGrid, List, Edit, Copy, Trash2, Download, X, Save } from 'lucide-react';
 import type { DatePresetKey } from '@/types/api';
 import { toast } from 'sonner';
