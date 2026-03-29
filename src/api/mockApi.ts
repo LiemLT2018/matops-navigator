@@ -86,7 +86,7 @@ export async function getProductOrders(): Promise<PagingResponse<ProductOrder[]>
 // BOM
 export interface BOMMaster {
   id: string; code: string; product: string; customer: string; version: string;
-  status: string; createdDate: string; itemCount: number;
+  status: string; createdDate: string; completedDate: string; itemCount: number; childBomCount: number;
 }
 
 export interface BOMDetail {
@@ -94,14 +94,38 @@ export interface BOMDetail {
   specification: string; unit: string; quantity: number; note: string; children?: BOMDetail[];
 }
 
-export async function getBOMs(): Promise<PagingResponse<BOMMaster[]>> {
+export interface BOMChildRef {
+  id: string; bomCode: string; bomName: string; quantity: number; unit: string; note: string;
+}
+
+export interface MaterialSuggest {
+  id: string; code: string; name: string; specification: string; unit: string;
+  manufacturer: string; aliases: string[];
+}
+
+export async function getBOMs(params?: { page?: number; pageSize?: number; status?: string; keyword?: string }): Promise<PagingResponse<BOMMaster[]>> {
   await delay();
-  return paged([
-    { id: '1', code: 'BOM-0231', product: 'Khung thép KT-500', customer: 'CP Cơ khí Hà Nội', version: 'v2.1', status: 'approved', createdDate: '2026-01-20', itemCount: 45 },
-    { id: '2', code: 'BOM-0232', product: 'Bệ máy BM-200', customer: 'CP Cơ khí Hà Nội', version: 'v1.0', status: 'in_progress', createdDate: '2026-02-05', itemCount: 32 },
-    { id: '3', code: 'BOM-0233', product: 'Trục khuỷu TK-100', customer: 'TNHH Thép Miền Nam', version: 'v1.2', status: 'approved', createdDate: '2026-02-12', itemCount: 18 },
-    { id: '4', code: 'BOM-0234', product: 'Hộp số HS-300', customer: 'Tổng CT Máy Động Lực', version: 'v0.3', status: 'draft', createdDate: '2026-03-01', itemCount: 56 },
-  ], 15);
+  const all: BOMMaster[] = [
+    { id: '1', code: 'BOM-0231', product: 'Khung thép KT-500', customer: 'CP Cơ khí Hà Nội', version: 'v2.1', status: 'approved', createdDate: '2026-01-20', completedDate: '2026-02-15', itemCount: 45, childBomCount: 2 },
+    { id: '2', code: 'BOM-0232', product: 'Bệ máy BM-200', customer: 'CP Cơ khí Hà Nội', version: 'v1.0', status: 'in_progress', createdDate: '2026-02-05', completedDate: '', itemCount: 32, childBomCount: 1 },
+    { id: '3', code: 'BOM-0233', product: 'Trục khuỷu TK-100', customer: 'TNHH Thép Miền Nam', version: 'v1.2', status: 'approved', createdDate: '2026-02-12', completedDate: '2026-03-01', itemCount: 18, childBomCount: 0 },
+    { id: '4', code: 'BOM-0234', product: 'Hộp số HS-300', customer: 'Tổng CT Máy Động Lực', version: 'v0.3', status: 'draft', createdDate: '2026-03-01', completedDate: '', itemCount: 56, childBomCount: 3 },
+    { id: '5', code: 'BOM-0235', product: 'Van điều khiển VD-100', customer: 'CP Thiết bị Công nghiệp', version: 'v1.0', status: 'pending', createdDate: '2026-03-10', completedDate: '', itemCount: 12, childBomCount: 0 },
+    { id: '6', code: 'BOM-0236', product: 'Bánh răng BR-45', customer: 'Tổng CT Máy Động Lực', version: 'v2.0', status: 'approved', createdDate: '2026-01-05', completedDate: '2026-01-28', itemCount: 8, childBomCount: 0 },
+    { id: '7', code: 'BOM-0237', product: 'Trục chính TC-200', customer: 'TNHH Chế tạo Máy SG', version: 'v1.1', status: 'in_progress', createdDate: '2026-03-15', completedDate: '', itemCount: 22, childBomCount: 1 },
+    { id: '8', code: 'BOM-0238', product: 'Vỏ hộp số VH-300', customer: 'Tổng CT Máy Động Lực', version: 'v1.0', status: 'draft', createdDate: '2026-03-20', completedDate: '', itemCount: 15, childBomCount: 0 },
+  ];
+  let filtered = all;
+  if (params?.status && params.status !== 'all') filtered = filtered.filter(b => b.status === params.status);
+  if (params?.keyword) {
+    const kw = params.keyword.toLowerCase();
+    filtered = filtered.filter(b => b.code.toLowerCase().includes(kw) || b.product.toLowerCase().includes(kw));
+  }
+  const page = params?.page || 1;
+  const pageSize = params?.pageSize || 10;
+  const start = (page - 1) * pageSize;
+  const pageData = filtered.slice(start, start + pageSize);
+  return { errorCode: 0, errorMessage: '', data: pageData, pagination: { totalCount: filtered.length, totalPages: Math.ceil(filtered.length / pageSize), currentPages: page } };
 }
 
 export async function getBOMDetail(bomId: string): Promise<BaseResponse<BOMDetail[]>> {
@@ -115,6 +139,53 @@ export async function getBOMDetail(bomId: string): Promise<BaseResponse<BOMDetai
     { id: 'D4', level: 0, materialCode: 'WLD-003', materialName: 'Que hàn E7018', specification: 'Ø3.2mm', unit: 'Kg', quantity: 25, note: '' },
     { id: 'D5', level: 0, materialCode: 'PNT-001', materialName: 'Sơn chống rỉ', specification: 'Đỏ - 1 lớp', unit: 'Lít', quantity: 15, note: '' },
   ]);
+}
+
+export async function getBOMChildRefs(bomId: string): Promise<BaseResponse<BOMChildRef[]>> {
+  await delay();
+  const map: Record<string, BOMChildRef[]> = {
+    '1': [
+      { id: 'CB1', bomCode: 'BOM-0236', bomName: 'Bánh răng BR-45', quantity: 4, unit: 'Cái', note: 'Bánh răng truyền động' },
+      { id: 'CB2', bomCode: 'BOM-0238', bomName: 'Vỏ hộp số VH-300', quantity: 1, unit: 'Bộ', note: '' },
+    ],
+    '4': [
+      { id: 'CB3', bomCode: 'BOM-0236', bomName: 'Bánh răng BR-45', quantity: 6, unit: 'Cái', note: '' },
+      { id: 'CB4', bomCode: 'BOM-0237', bomName: 'Trục chính TC-200', quantity: 1, unit: 'Cái', note: '' },
+      { id: 'CB5', bomCode: 'BOM-0238', bomName: 'Vỏ hộp số VH-300', quantity: 1, unit: 'Bộ', note: 'Vỏ ngoài' },
+    ],
+  };
+  return ok(map[bomId] || []);
+}
+
+export async function searchMaterials(keyword: string): Promise<BaseResponse<MaterialSuggest[]>> {
+  await delay(100);
+  const all: MaterialSuggest[] = [
+    { id: '1', code: 'STL-001', name: 'Thép tấm SS400', specification: '20x1500x6000mm', unit: 'Kg', manufacturer: 'POSCO', aliases: ['thep tam 20ly', 'thep tam ss400', 'steel plate ss400'] },
+    { id: '2', code: 'STL-002', name: 'Thép hình H200', specification: 'H200x200x8x12', unit: 'Kg', manufacturer: 'Hòa Phát', aliases: ['thep hinh h200', 'thep h 200', 'h beam 200'] },
+    { id: '3', code: 'BLT-012', name: 'Bu lông M12x50', specification: '8.8 mạ kẽm', unit: 'Cái', manufacturer: 'Bulong Đại Dương', aliases: ['bulon m12', 'bulon 12', 'bolt m12x50'] },
+    { id: '4', code: 'NUT-012', name: 'Đai ốc M12', specification: '8.8 mạ kẽm', unit: 'Cái', manufacturer: 'Bulong Đại Dương', aliases: ['dai oc m12', 'dai oc 12', 'nut m12'] },
+    { id: '5', code: 'WLD-003', name: 'Que hàn E7018', specification: 'Ø3.2mm', unit: 'Kg', manufacturer: 'Hyundai Welding', aliases: ['que han 3.2', 'que han e7018', 'welding rod'] },
+    { id: '6', code: 'PNT-001', name: 'Sơn chống rỉ', specification: 'Đỏ - 1 lớp', unit: 'Lít', manufacturer: 'Jotun', aliases: ['son chong ri', 'son do', 'primer red'] },
+    { id: '7', code: 'BRG-001', name: 'Bạc đạn 6205', specification: '25x52x15mm', unit: 'Cái', manufacturer: 'SKF', aliases: ['bac dan 6205', 'vong bi 6205', 'bearing 6205'] },
+    { id: '8', code: 'RBR-001', name: 'Tấm cao su chịu nhiệt', specification: '500x500x10mm', unit: 'Tấm', manufacturer: 'Kumho', aliases: ['tam cao su', 'cao su chiu nhiet', 'rubber sheet'] },
+    { id: '9', code: 'STL-003', name: 'Thép ống phi 60', specification: 'Ø60x3.5mm', unit: 'Mét', manufacturer: 'Hòa Phát', aliases: ['thep ong phi 60', 'ong thep 60', 'steel pipe 60'] },
+    { id: '10', code: 'INX-001', name: 'Inox tấm 304', specification: '2x1220x2440mm', unit: 'Tấm', manufacturer: 'POSCO', aliases: ['inox 304', 'inox tam', 'stainless steel 304'] },
+  ];
+  const kw = keyword.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const filtered = all.filter(m => {
+    const nameNorm = m.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const specNorm = m.specification.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const mfgNorm = m.manufacturer.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (nameNorm.includes(kw) || specNorm.includes(kw) || mfgNorm.includes(kw) || m.code.toLowerCase().includes(kw)) return true;
+    return m.aliases.some(a => a.includes(kw));
+  });
+  return ok(filtered);
+}
+
+export async function searchBOMs(keyword: string): Promise<BaseResponse<BOMMaster[]>> {
+  await delay(100);
+  const res = await getBOMs({ keyword });
+  return ok(res.data);
 }
 
 // Purchase Requests
