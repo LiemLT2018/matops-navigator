@@ -263,6 +263,58 @@ export async function getMaterialStockInfo(materialCode: string): Promise<BaseRe
   return ok(map[materialCode] || null);
 }
 
+// Get all materials for a BOM including child BOMs (flattened)
+export interface BOMFlatMaterial {
+  materialCode: string; materialName: string; materialUuid: string;
+  specification: string; unit: string; quantity: number;
+  manufacturer: string; estimatedPrice: number;
+}
+
+export async function getBOMAllMaterials(bomId: string): Promise<BaseResponse<BOMFlatMaterial[]>> {
+  await delay();
+  // Get direct materials
+  const detRes = await getBOMDetail(bomId);
+  const materials: BOMFlatMaterial[] = [];
+  
+  const addMaterials = (details: BOMDetail[], multiplier: number = 1) => {
+    for (const d of details) {
+      materials.push({
+        materialCode: d.materialCode, materialName: d.materialName,
+        materialUuid: d.materialCode, specification: d.specification,
+        unit: d.unit, quantity: d.quantity * multiplier,
+        manufacturer: '', estimatedPrice: 0,
+      });
+      if (d.children) addMaterials(d.children, multiplier);
+    }
+  };
+  addMaterials(detRes.data);
+
+  // Get child BOM materials
+  const childRes = await getBOMChildRefs(bomId);
+  for (const child of childRes.data) {
+    const childBomId = Object.keys({ '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8 })
+      .find(id => {
+        const codes = ['BOM-0231','BOM-0232','BOM-0233','BOM-0234','BOM-0235','BOM-0236','BOM-0237','BOM-0238'];
+        return codes[parseInt(id) - 1] === child.bomCode;
+      });
+    if (childBomId) {
+      const childDet = await getBOMDetail(childBomId);
+      addMaterials(childDet.data, child.quantity);
+    }
+  }
+
+  // Try to enrich with stock info
+  for (const m of materials) {
+    const stockInfo = await getMaterialStockInfo(m.materialUuid);
+    if (stockInfo.data) {
+      m.manufacturer = stockInfo.data.manufacturer;
+      m.estimatedPrice = stockInfo.data.lastPrice;
+    }
+  }
+
+  return ok(materials);
+}
+
 // Purchase Orders
 export interface PurchaseOrder {
   id: string; code: string; prRef: string; supplier: string; date: string;

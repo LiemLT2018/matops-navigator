@@ -176,6 +176,8 @@
       "estimatedPrice": "Est. Price",
       "lastSupplier": "Last Supplier",
       "lastPriceSh": "Last Price",
+      "totalAmountCol": "Total Amount",
+      "inputFromBom": "Input from BOM",
       "importTitle": "Import PR from Excel",
       "importDesc": "Select an Excel file with material list to import",
       "selectFile": "Select Excel File",

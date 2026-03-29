@@ -165,6 +165,42 @@ export default function BOMPage() {
     setFormMaterials([...formMaterials, emptyMaterial()]);
   };
 
+  const handleChildBOMLastFieldTab = useCallback((index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Tab' && !e.shiftKey && index === formChildBOMs.length - 1) {
+      if (isChildBOMRowComplete(formChildBOMs[index])) {
+        e.preventDefault();
+        setFormChildBOMs(prev => [...prev, emptyChildBOM()]);
+        setTimeout(() => {
+          const table = document.querySelector('[data-bom-child-table]');
+          if (table) {
+            const rows = table.querySelectorAll('tbody tr');
+            const lastRow = rows[rows.length - 1];
+            const firstInput = lastRow?.querySelector('input:not([disabled])');
+            if (firstInput) (firstInput as HTMLElement).focus();
+          }
+        }, 50);
+      }
+    }
+  }, [formChildBOMs]);
+
+  const handleMaterialLastFieldTab = useCallback((index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Tab' && !e.shiftKey && index === formMaterials.length - 1) {
+      if (isMaterialRowComplete(formMaterials[index])) {
+        e.preventDefault();
+        setFormMaterials(prev => [...prev, emptyMaterial()]);
+        setTimeout(() => {
+          const table = document.querySelector('[data-bom-material-table]');
+          if (table) {
+            const rows = table.querySelectorAll('tbody tr');
+            const lastRow = rows[rows.length - 1];
+            const firstInput = lastRow?.querySelector('input:not([disabled])');
+            if (firstInput) (firstInput as HTMLElement).focus();
+          }
+        }, 50);
+      }
+    }
+  }, [formMaterials]);
+
   const statuses = ['all', 'draft', 'pending', 'in_progress', 'approved', 'completed'];
 
   const renderBOMDetailTable = (details: BOMDetail[], childRefs: BOMChildRef[]) => (
@@ -260,7 +296,7 @@ export default function BOMPage() {
             <h3 className="text-sm font-semibold">{t('bom.childBOMs')}</h3>
             <Button variant="outline" size="sm" onClick={addChildBOMRow}><Plus className="h-3 w-3 mr-1" />{t('bom.addRow')}</Button>
           </div>
-          <div className="border border-border rounded-md overflow-hidden">
+          <div className="border border-border rounded-md overflow-hidden" data-bom-child-table>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -289,7 +325,7 @@ export default function BOMPage() {
                       <Input value={row.unit} onChange={e => { const u = [...formChildBOMs]; u[i] = { ...u[i], unit: e.target.value }; setFormChildBOMs(u); }} className="h-8 text-sm" />
                     </TableCell>
                     <TableCell className="p-1">
-                      <Input value={row.note} onChange={e => { const u = [...formChildBOMs]; u[i] = { ...u[i], note: e.target.value }; setFormChildBOMs(u); }} className="h-8 text-sm" />
+                      <Input value={row.note} onChange={e => { const u = [...formChildBOMs]; u[i] = { ...u[i], note: e.target.value }; setFormChildBOMs(u); }} onKeyDown={e => handleChildBOMLastFieldTab(i, e)} className="h-8 text-sm" />
                     </TableCell>
                     <TableCell className="p-1">
                       <div className="flex gap-1">
@@ -310,7 +346,7 @@ export default function BOMPage() {
             <h3 className="text-sm font-semibold">{t('bom.materialList')}</h3>
             <Button variant="outline" size="sm" onClick={addMaterialRow}><Plus className="h-3 w-3 mr-1" />{t('bom.addRow')}</Button>
           </div>
-          <div className="border border-border rounded-md overflow-hidden">
+          <div className="border border-border rounded-md overflow-hidden" data-bom-material-table>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -356,7 +392,7 @@ export default function BOMPage() {
                         type="manufacturer" placeholder={t('bom.manufacturer')} />
                     </TableCell>
                     <TableCell className="p-1">
-                      <Input value={row.note} onChange={e => { const u = [...formMaterials]; u[i] = { ...u[i], note: e.target.value }; setFormMaterials(u); }} className="h-8 text-sm" />
+                      <Input value={row.note} onChange={e => { const u = [...formMaterials]; u[i] = { ...u[i], note: e.target.value }; setFormMaterials(u); }} onKeyDown={e => handleMaterialLastFieldTab(i, e)} className="h-8 text-sm" />
                     </TableCell>
                     <TableCell className="p-1">
                       <div className="flex gap-1">

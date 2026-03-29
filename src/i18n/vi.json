@@ -176,6 +176,8 @@
       "estimatedPrice": "Giá dự kiến",
       "lastSupplier": "NCC gần nhất",
       "lastPriceSh": "Giá gần nhất",
+      "totalAmountCol": "Tổng tiền",
+      "inputFromBom": "Nhập vào từ BOM",
       "importTitle": "Nhập PR từ Excel",
       "importDesc": "Chọn file Excel chứa danh sách vật tư cần mua",
       "selectFile": "Chọn file Excel",
