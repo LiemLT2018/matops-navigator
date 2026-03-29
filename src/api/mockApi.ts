@@ -192,29 +192,75 @@ export async function searchBOMs(keyword: string): Promise<BaseResponse<BOMMaste
 export interface PurchaseRequest {
   id: string; code: string; requester: string; department: string; date: string;
   bomRefs: string[]; status: string; itemCount: number; totalAmount: number;
+  priority: string; note: string;
 }
 
 export interface PRItem {
   id: string; materialCode: string; materialName: string; specification: string;
-  unit: string; stockQty: number; requestQty: number; supplier: string; isNew: boolean;
+  unit: string; quantity: number; stockQty: number; estimatedPrice: number;
+  lastSupplier: string; lastPrice: number; manufacturer: string; note: string; isNew: boolean;
 }
 
-export async function getPurchaseRequests(): Promise<PagingResponse<PurchaseRequest[]>> {
+export interface MaterialStockInfo {
+  materialCode: string; materialName: string; specification: string; unit: string;
+  currentStock: number; minStock: number; lastSupplier: string; lastPrice: number;
+  avgPrice: number; manufacturer: string;
+}
+
+export async function getPurchaseRequests(params?: { page?: number; pageSize?: number; status?: string; keyword?: string }): Promise<PagingResponse<PurchaseRequest[]>> {
   await delay();
-  return paged([
-    { id: '1', code: 'PR-2026-0156', requester: 'Nguyễn Văn A', department: 'Kỹ thuật', date: '2026-03-15', bomRefs: ['BOM-0231', 'BOM-0232'], status: 'pending', itemCount: 15, totalAmount: 45000000 },
-    { id: '2', code: 'PR-2026-0157', requester: 'Trần Văn B', department: 'Kỹ thuật', date: '2026-03-18', bomRefs: ['BOM-0233'], status: 'approved', itemCount: 8, totalAmount: 28000000 },
-    { id: '3', code: 'PR-2026-0158', requester: 'Lê Thị C', department: 'Sản xuất', date: '2026-03-20', bomRefs: ['BOM-0234'], status: 'draft', itemCount: 22, totalAmount: 67000000 },
-  ], 5);
+  const all: PurchaseRequest[] = [
+    { id: '1', code: 'PR-2026-0156', requester: 'Nguyễn Văn A', department: 'Kỹ thuật', date: '2026-03-15', bomRefs: ['BOM-0231', 'BOM-0232'], status: 'pending', itemCount: 15, totalAmount: 45000000, priority: 'high', note: 'Cần gấp cho đơn SO-0089' },
+    { id: '2', code: 'PR-2026-0157', requester: 'Trần Văn B', department: 'Kỹ thuật', date: '2026-03-18', bomRefs: ['BOM-0233'], status: 'approved', itemCount: 8, totalAmount: 28000000, priority: 'normal', note: '' },
+    { id: '3', code: 'PR-2026-0158', requester: 'Lê Thị C', department: 'Sản xuất', date: '2026-03-20', bomRefs: ['BOM-0234'], status: 'draft', itemCount: 22, totalAmount: 67000000, priority: 'normal', note: 'BOM chưa duyệt' },
+    { id: '4', code: 'PR-2026-0159', requester: 'Phạm Văn D', department: 'Kỹ thuật', date: '2026-03-22', bomRefs: ['BOM-0235'], status: 'pending', itemCount: 5, totalAmount: 12000000, priority: 'low', note: '' },
+    { id: '5', code: 'PR-2026-0160', requester: 'Nguyễn Văn A', department: 'Kỹ thuật', date: '2026-03-25', bomRefs: ['BOM-0231'], status: 'rejected', itemCount: 3, totalAmount: 8500000, priority: 'normal', note: 'Trùng PR-0156' },
+    { id: '6', code: 'PR-2026-0161', requester: 'Trần Văn B', department: 'Sản xuất', date: '2026-03-26', bomRefs: ['BOM-0237', 'BOM-0238'], status: 'draft', itemCount: 18, totalAmount: 52000000, priority: 'high', note: '' },
+  ];
+  let filtered = all;
+  if (params?.status && params.status !== 'all') filtered = filtered.filter(p => p.status === params.status);
+  if (params?.keyword) {
+    const kw = params.keyword.toLowerCase();
+    filtered = filtered.filter(p => p.code.toLowerCase().includes(kw) || p.requester.toLowerCase().includes(kw));
+  }
+  const page = params?.page || 1;
+  const pageSize = params?.pageSize || 10;
+  const start = (page - 1) * pageSize;
+  const pageData = filtered.slice(start, start + pageSize);
+  return { errorCode: 0, errorMessage: '', data: pageData, pagination: { totalCount: filtered.length, totalPages: Math.ceil(filtered.length / pageSize), currentPages: page } };
 }
 
 export async function getPRItems(prId: string): Promise<BaseResponse<PRItem[]>> {
   await delay();
-  return ok([
-    { id: 'I1', materialCode: 'STL-001', materialName: 'Thép tấm SS400', specification: '20x1500x6000mm', unit: 'Tấm', stockQty: 12, requestQty: 20, supplier: 'POSCO Vietnam', isNew: false },
-    { id: 'I2', materialCode: 'BLT-012', materialName: 'Bu lông M12x50', specification: '8.8 mạ kẽm', unit: 'Cái', stockQty: 150, requestQty: 500, supplier: 'Bulong Đại Dương', isNew: false },
-    { id: 'I3', materialCode: '', materialName: 'Tấm đệm cao su đặc biệt', specification: '50x100x5mm - Chịu nhiệt', unit: 'Cái', stockQty: 0, requestQty: 100, supplier: '', isNew: true },
-  ]);
+  const map: Record<string, PRItem[]> = {
+    '1': [
+      { id: 'I1', materialCode: 'STL-001', materialName: 'Thép tấm SS400', specification: '20x1500x6000mm', unit: 'Tấm', quantity: 20, stockQty: 12, estimatedPrice: 370000, lastSupplier: 'POSCO Vietnam', lastPrice: 365000, manufacturer: 'POSCO', note: '', isNew: false },
+      { id: 'I2', materialCode: 'BLT-012', materialName: 'Bu lông M12x50', specification: '8.8 mạ kẽm', unit: 'Cái', quantity: 500, stockQty: 150, estimatedPrice: 3500, lastSupplier: 'Bulong Đại Dương', lastPrice: 3200, manufacturer: 'Việt Đức', note: '', isNew: false },
+      { id: 'I3', materialCode: '', materialName: 'Tấm đệm cao su đặc biệt', specification: '50x100x5mm - Chịu nhiệt', unit: 'Cái', quantity: 100, stockQty: 0, estimatedPrice: 25000, lastSupplier: '', lastPrice: 0, manufacturer: '', note: 'Vật tư mới', isNew: true },
+    ],
+    '2': [
+      { id: 'I4', materialCode: 'WLD-003', materialName: 'Que hàn E7018', specification: 'Ø3.2mm', unit: 'Kg', quantity: 50, stockQty: 180, estimatedPrice: 45000, lastSupplier: 'CT TNHH Hàn Quốc Việt Nam', lastPrice: 43000, manufacturer: 'Hyundai', note: '', isNew: false },
+      { id: 'I5', materialCode: 'PNT-001', materialName: 'Sơn chống rỉ', specification: 'Đỏ - 1 lớp', unit: 'Lít', quantity: 30, stockQty: 45, estimatedPrice: 85000, lastSupplier: 'Sơn Hải Phòng', lastPrice: 82000, manufacturer: 'Jotun', note: '', isNew: false },
+    ],
+  };
+  return ok(map[prId] || map['1']);
+}
+
+export async function getMaterialStockInfo(materialCode: string): Promise<BaseResponse<MaterialStockInfo | null>> {
+  await delay(100);
+  const map: Record<string, MaterialStockInfo> = {
+    'mat-001': { materialCode: 'mat-001', materialName: 'Nhôm Trung Quốc', specification: '360x204x38', unit: 'Tấm', currentStock: 25, minStock: 10, lastSupplier: 'China OEM', lastPrice: 185000, avgPrice: 180000, manufacturer: 'China OEM' },
+    'mat-002': { materialCode: 'mat-002', materialName: 'Nhôm 6061', specification: '500x300x7', unit: 'Tấm', currentStock: 42, minStock: 20, lastSupplier: 'Posco', lastPrice: 225000, avgPrice: 220000, manufacturer: 'Posco' },
+    'mat-003': { materialCode: 'mat-003', materialName: 'Sắt tấm', specification: 'dày 2mm', unit: 'Tấm', currentStock: 88, minStock: 50, lastSupplier: 'Hòa Phát', lastPrice: 18500, avgPrice: 18000, manufacturer: 'Hòa Phát' },
+    'mat-004': { materialCode: 'mat-004', materialName: 'Inox 304', specification: '1220x2440x2', unit: 'Tấm', currentStock: 15, minStock: 10, lastSupplier: 'Posco', lastPrice: 320000, avgPrice: 315000, manufacturer: 'Posco' },
+    'mat-005': { materialCode: 'mat-005', materialName: 'Bạc đạn SKF 6205', specification: 'model 6205', unit: 'Cái', currentStock: 60, minStock: 20, lastSupplier: 'SKF', lastPrice: 125000, avgPrice: 122000, manufacturer: 'SKF' },
+    'mat-006': { materialCode: 'mat-006', materialName: 'Thép hộp 40x80', specification: '40x80x1.2', unit: 'Cây', currentStock: 120, minStock: 50, lastSupplier: 'Hòa Phát', lastPrice: 95000, avgPrice: 92000, manufacturer: 'Hòa Phát' },
+    'mat-007': { materialCode: 'mat-007', materialName: 'Ống thép đen phi 60', specification: 'phi 60x3', unit: 'Cây', currentStock: 35, minStock: 20, lastSupplier: 'Pomina', lastPrice: 145000, avgPrice: 140000, manufacturer: 'Pomina' },
+    'mat-008': { materialCode: 'mat-008', materialName: 'Bu lông M12x50', specification: 'M12x50 8.8', unit: 'Cái', currentStock: 500, minStock: 200, lastSupplier: 'Việt Đức', lastPrice: 3500, avgPrice: 3200, manufacturer: 'Việt Đức' },
+    'mat-009': { materialCode: 'mat-009', materialName: 'Đai ốc M12', specification: 'M12', unit: 'Cái', currentStock: 800, minStock: 300, lastSupplier: 'Việt Đức', lastPrice: 1200, avgPrice: 1100, manufacturer: 'Việt Đức' },
+    'mat-010': { materialCode: 'mat-010', materialName: 'Que hàn 2.5mm', specification: '2.5mm E6013', unit: 'Kg', currentStock: 200, minStock: 100, lastSupplier: 'Hyundai', lastPrice: 38000, avgPrice: 36000, manufacturer: 'Hyundai' },
+  };
+  return ok(map[materialCode] || null);
 }
 
 // Purchase Orders

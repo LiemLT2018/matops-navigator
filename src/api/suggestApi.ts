@@ -69,6 +69,16 @@ const MOCK_DATA: Record<string, SuggestData[]> = {
     { type: 'manufacturer', uuid: 'mfr-009', name: 'NSK', normalizedName: 'nsk', alias: ['nsk bearing'] },
     { type: 'manufacturer', uuid: 'mfr-010', name: 'FAG', normalizedName: 'fag', alias: ['fag bearing', 'schaeffler'] },
   ],
+  bom: [
+    { type: 'bom', uuid: 'bom-001', name: 'Khung thép KT-500', normalizedName: 'khung thep kt-500', alias: ['kt500', 'khung thep'] },
+    { type: 'bom', uuid: 'bom-002', name: 'Bệ máy BM-200', normalizedName: 'be may bm-200', alias: ['bm200', 'be may'] },
+    { type: 'bom', uuid: 'bom-003', name: 'Trục khuỷu TK-100', normalizedName: 'truc khuyu tk-100', alias: ['tk100', 'truc khuyu'] },
+    { type: 'bom', uuid: 'bom-004', name: 'Hộp số HS-300', normalizedName: 'hop so hs-300', alias: ['hs300', 'hop so'] },
+    { type: 'bom', uuid: 'bom-005', name: 'Van điều khiển VD-100', normalizedName: 'van dieu khien vd-100', alias: ['vd100', 'van dk'] },
+    { type: 'bom', uuid: 'bom-006', name: 'Bánh răng BR-45', normalizedName: 'banh rang br-45', alias: ['br45', 'banh rang'] },
+    { type: 'bom', uuid: 'bom-007', name: 'Trục chính TC-200', normalizedName: 'truc chinh tc-200', alias: ['tc200', 'truc chinh'] },
+    { type: 'bom', uuid: 'bom-008', name: 'Vỏ hộp số VH-300', normalizedName: 'vo hop so vh-300', alias: ['vh300', 'vo hop so'] },
+  ],
 };
 
 /**

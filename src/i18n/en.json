@@ -165,7 +165,21 @@
       "stockQty": "Stock Qty",
       "requestQty": "Request Qty",
       "addItem": "Add Material",
-      "newItem": "New Material (undeclared)"
+      "newItem": "New Material (undeclared)",
+      "createPR": "Create PR",
+      "editPR": "Edit PR",
+      "materialList": "Material List",
+      "priority": "Priority",
+      "priorityLow": "Low",
+      "priorityNormal": "Normal",
+      "priorityHigh": "High",
+      "estimatedPrice": "Est. Price",
+      "lastSupplier": "Last Supplier",
+      "lastPriceSh": "Last Price",
+      "importTitle": "Import PR from Excel",
+      "importDesc": "Select an Excel file with material list to import",
+      "selectFile": "Select Excel File",
+      "downloadTemplate": "Download Template"
     },
     "order": {
       "title": "Purchase Order",
