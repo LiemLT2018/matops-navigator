@@ -18,7 +18,7 @@ export default function PurchaseRequestsPage() {
   const { t } = useTranslation();
   const [data, setData] = useState<PurchaseRequest[]>([]);
   const [search, setSearch] = useState('');
-  const [preset, setPreset] = useState<DatePresetKey>('this_month');
+  const [preset, setPreset] = useState<DateFilter>('this_month');
 
   useEffect(() => { getPurchaseRequests().then(r => setData(r.data)); }, []);
 
