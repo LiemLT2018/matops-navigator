@@ -395,30 +395,31 @@ export default function BOMPage() {
                   <TableRow key={row._key}>
                     <TableCell className="p-1"><Input value={row.materialCode} disabled className="h-8 text-sm font-mono bg-muted/50" /></TableCell>
                     <TableCell className="p-1">
-                      <SuggestInput value={row.materialName} onChange={v => handleMatNameChange(row._key, v, i)}
-                        onSelect={m => handleMatSelect(row._key, m, i)} suggestions={matSuggestions[row._key] || []}
-                        placeholder={t('bom.materialName')} />
+                      <SuggestInputText value={row.materialName} selectedUuid={row.materialCode}
+                        onChange={v => handleMatFieldChange(i, 'materialName', v)}
+                        onSelect={item => handleMatSuggestSelect(i, 'materialName', item)}
+                        type="material" placeholder={t('bom.materialName')} />
                     </TableCell>
                     <TableCell className="p-1">
-                      <SuggestInput value={row.specification}
-                        onChange={v => { const u = [...formMaterials]; u[i] = { ...u[i], specification: v }; setFormMaterials(u); }}
-                        onSelect={m => handleMatSelect(row._key, m, i)} suggestions={matSuggestions[row._key] || []}
-                        placeholder={t('bom.specification')} />
+                      <SuggestInputText value={row.specification}
+                        onChange={v => handleMatFieldChange(i, 'specification', v)}
+                        onSelect={item => handleMatSuggestSelect(i, 'specification', item)}
+                        type="specification" placeholder={t('bom.specification')} />
                     </TableCell>
                     <TableCell className="p-1">
-                      <SuggestInput value={row.unit}
-                        onChange={v => { const u = [...formMaterials]; u[i] = { ...u[i], unit: v }; setFormMaterials(u); }}
-                        onSelect={m => handleMatSelect(row._key, m, i)} suggestions={matSuggestions[row._key] || []}
-                        placeholder={t('bom.unit')} />
+                      <SuggestInputText value={row.unit}
+                        onChange={v => handleMatFieldChange(i, 'unit', v)}
+                        onSelect={item => handleMatSuggestSelect(i, 'unit', item)}
+                        type="unit" placeholder={t('bom.unit')} />
                     </TableCell>
                     <TableCell className="p-1">
                       <Input type="number" value={row.quantity} onChange={e => { const u = [...formMaterials]; u[i] = { ...u[i], quantity: e.target.value }; setFormMaterials(u); }} className="h-8 text-sm" />
                     </TableCell>
                     <TableCell className="p-1">
-                      <SuggestInput value={row.manufacturer}
-                        onChange={v => { const u = [...formMaterials]; u[i] = { ...u[i], manufacturer: v }; setFormMaterials(u); }}
-                        onSelect={m => handleMatSelect(row._key, m, i)} suggestions={matSuggestions[row._key] || []}
-                        placeholder={t('bom.manufacturer')} />
+                      <SuggestInputText value={row.manufacturer}
+                        onChange={v => handleMatFieldChange(i, 'manufacturer', v)}
+                        onSelect={item => handleMatSuggestSelect(i, 'manufacturer', item)}
+                        type="manufacturer" placeholder={t('bom.manufacturer')} />
                     </TableCell>
                     <TableCell className="p-1">
                       <Input value={row.note} onChange={e => { const u = [...formMaterials]; u[i] = { ...u[i], note: e.target.value }; setFormMaterials(u); }} className="h-8 text-sm" />
