@@ -14,6 +14,8 @@ import { getBOMs, getBOMDetail, getBOMChildRefs, searchMaterials, searchBOMs, ty
 import { Plus, Search, ChevronDown, ChevronRight, Upload, LayoutGrid, List, Edit, Copy, Trash2, Download, X, Save } from 'lucide-react';
 import type { DatePresetKey } from '@/types/api';
 import { toast } from 'sonner';
+import { SuggestInputText } from '@/components/SuggestInputText';
+import type { SuggestData } from '@/api/suggestApi';
 
 type DateFilter = DatePresetKey | 'all';
 
