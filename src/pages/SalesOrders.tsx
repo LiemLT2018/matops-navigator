@@ -12,6 +12,8 @@ import { formatCurrency } from '@/utils/formatNumber';
 import { Plus, Search } from 'lucide-react';
 import type { DatePresetKey } from '@/types/api';
 
+type DateFilter = DatePresetKey | 'all';
+
 export default function SalesOrdersPage() {
   const { t } = useTranslation();
   const [data, setData] = useState<SalesOrder[]>([]);

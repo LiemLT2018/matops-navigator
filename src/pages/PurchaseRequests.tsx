@@ -12,6 +12,8 @@ import { Plus, Search } from 'lucide-react';
 import { DatePresetSelect } from '@/components/DatePresetSelect';
 import type { DatePresetKey } from '@/types/api';
 
+type DateFilter = DatePresetKey | 'all';
+
 export default function PurchaseRequestsPage() {
   const { t } = useTranslation();
   const [data, setData] = useState<PurchaseRequest[]>([]);
