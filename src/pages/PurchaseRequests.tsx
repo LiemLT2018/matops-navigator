@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { getPurchaseRequests, getPRItems, getMaterialStockInfo, type PurchaseRequest, type PRItem, type MaterialStockInfo } from '@/api/mockApi';
+import { getPurchaseRequests, getPRItems, getMaterialStockInfo, getBOMAllMaterials, type PurchaseRequest, type PRItem, type MaterialStockInfo, type BOMFlatMaterial } from '@/api/mockApi';
 import { formatCurrency } from '@/utils/formatNumber';
 import { NumberDisplay } from '@/components/NumberDisplay';
 import { Plus, Search, Upload, Download, Edit, Copy, Trash2, X, Save, ChevronDown, ChevronRight } from 'lucide-react';
@@ -170,15 +170,97 @@ export default function PurchaseRequestsPage() {
     setFormMaterials([...formMaterials, emptyMaterial()]);
   };
 
-  const handleLastFieldTab = (index: number, e: React.KeyboardEvent) => {
+  const handleLastFieldTab = useCallback((index: number, e: React.KeyboardEvent) => {
     if (e.key === 'Tab' && !e.shiftKey && index === formMaterials.length - 1) {
       const last = formMaterials[formMaterials.length - 1];
       if (isMaterialRowComplete(last)) {
         e.preventDefault();
-        setFormMaterials([...formMaterials, emptyMaterial()]);
+        const newRow = emptyMaterial();
+        setFormMaterials(prev => [...prev, newRow]);
+        // Focus first input of new row after render
+        setTimeout(() => {
+          const table = document.querySelector('[data-pr-material-table]');
+          if (table) {
+            const rows = table.querySelectorAll('tbody tr');
+            const lastRow = rows[rows.length - 1];
+            const firstInput = lastRow?.querySelector('input:not([disabled])');
+            if (firstInput) (firstInput as HTMLElement).focus();
+          }
+        }, 50);
       }
     }
-  };
+  }, [formMaterials]);
+
+  // BOM suggest for importing materials
+  const [bomSuggestValue, setBomSuggestValue] = useState('');
+
+  const handleBomSuggestSelect = useCallback(async (item: SuggestData) => {
+    setBomSuggestValue('');
+    // Find bomId from suggest item uuid - map bom codes to IDs
+    const bomCodeToId: Record<string, string> = {
+      'bom-001': '1', 'bom-002': '2', 'bom-003': '3', 'bom-004': '4',
+      'bom-005': '5', 'bom-006': '6', 'bom-007': '7', 'bom-008': '8',
+    };
+    const bomId = bomCodeToId[item.uuid] || '1';
+    try {
+      const res = await getBOMAllMaterials(bomId);
+      if (res.data.length === 0) { toast.info(t('common.noData')); return; }
+
+      setFormMaterials(prev => {
+        // Remove empty rows
+        let current = prev.filter(r => r.materialName || r.quantity);
+        
+        for (const bm of res.data) {
+          const existIdx = current.findIndex(r => r.materialCode === bm.materialCode && r.materialCode);
+          if (existIdx >= 0) {
+            // Merge: add quantity
+            const existing = current[existIdx];
+            const newQty = Number(existing.quantity || 0) + bm.quantity;
+            const newEstPrice = bm.estimatedPrice * newQty;
+            current[existIdx] = { ...existing, quantity: String(newQty), estimatedPrice: String(newEstPrice) };
+          } else {
+            const totalPrice = bm.estimatedPrice * bm.quantity;
+            current.push({
+              _key: crypto.randomUUID(),
+              materialCode: bm.materialCode,
+              materialName: bm.materialName,
+              materialUuid: bm.materialUuid,
+              specification: bm.specification,
+              unit: bm.unit,
+              quantity: String(bm.quantity),
+              manufacturer: bm.manufacturer,
+              estimatedPrice: String(bm.estimatedPrice),
+              stockQty: null,
+              lastSupplier: '',
+              lastPrice: null,
+              note: '',
+            });
+          }
+        }
+
+        if (current.length === 0) current.push(emptyMaterial());
+        return current;
+      });
+
+      // Fetch stock info for all materials
+      for (const bm of res.data) {
+        if (bm.materialUuid) {
+          const stockRes = await getMaterialStockInfo(bm.materialUuid);
+          if (stockRes.data) {
+            setFormMaterials(prev => prev.map(r => 
+              r.materialCode === bm.materialCode
+                ? { ...r, stockQty: stockRes.data!.currentStock, lastSupplier: stockRes.data!.lastSupplier, lastPrice: stockRes.data!.lastPrice }
+                : r
+            ));
+          }
+        }
+      }
+
+      toast.success(`Đã nhập ${res.data.length} vật tư từ BOM ${item.name}`);
+    } catch {
+      toast.error('Lỗi khi lấy dữ liệu BOM');
+    }
+  }, [t]);
 
   const renderPRDetailTable = (items: PRItem[]) => (
     <div className="bg-muted/30 p-4 border-t border-border">
