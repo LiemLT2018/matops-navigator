@@ -359,7 +359,7 @@ export default function PurchaseRequestsPage() {
               <Button variant="outline" size="sm" onClick={addMaterialRow}><Plus className="h-3 w-3 mr-1" />{t('bom.addRow')}</Button>
             </div>
           </div>
-          <div className="border border-border rounded-md overflow-x-auto">
+          <div className="border border-border rounded-md overflow-x-auto" data-pr-material-table>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -372,7 +372,7 @@ export default function PurchaseRequestsPage() {
                   <TableHead className="w-[110px]">{t('purchasing.request.estimatedPrice')}</TableHead>
                   <TableHead className="w-[80px]">{t('purchasing.request.stockQty')}</TableHead>
                   <TableHead className="min-w-[120px]">{t('purchasing.request.lastSupplier')}</TableHead>
-                  <TableHead className="w-[90px]">{t('purchasing.request.lastPriceSh')}</TableHead>
+                  <TableHead className="w-[90px]">{t('purchasing.request.totalAmountCol')}</TableHead>
                   <TableHead>{t('bom.note')}</TableHead>
                   <TableHead className="w-[80px]">{t('common.actions')}</TableHead>
                 </TableRow>
