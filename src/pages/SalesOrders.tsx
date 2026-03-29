@@ -17,7 +17,7 @@ type DateFilter = DatePresetKey | 'all';
 export default function SalesOrdersPage() {
   const { t } = useTranslation();
   const [data, setData] = useState<SalesOrder[]>([]);
-  const [preset, setPreset] = useState<DatePresetKey>('this_month');
+  const [preset, setPreset] = useState<DateFilter>('this_month');
   const [search, setSearch] = useState('');
 
   useEffect(() => { getSalesOrders().then(r => setData(r.data)); }, []);
