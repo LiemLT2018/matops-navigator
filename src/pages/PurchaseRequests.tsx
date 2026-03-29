@@ -346,7 +346,18 @@ export default function PurchaseRequestsPage() {
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold">{t('purchasing.request.materialList')}</h3>
-            <Button variant="outline" size="sm" onClick={addMaterialRow}><Plus className="h-3 w-3 mr-1" />{t('bom.addRow')}</Button>
+            <div className="flex items-center gap-2">
+              <div className="w-[250px]">
+                <SuggestInputText
+                  value={bomSuggestValue}
+                  onChange={setBomSuggestValue}
+                  onSelect={handleBomSuggestSelect}
+                  type="bom"
+                  placeholder={t('purchasing.request.inputFromBom')}
+                />
+              </div>
+              <Button variant="outline" size="sm" onClick={addMaterialRow}><Plus className="h-3 w-3 mr-1" />{t('bom.addRow')}</Button>
+            </div>
           </div>
           <div className="border border-border rounded-md overflow-x-auto">
             <Table>
