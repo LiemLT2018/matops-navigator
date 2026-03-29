@@ -31,38 +31,7 @@ const emptyMaterial = (): FormMaterial => ({ _key: crypto.randomUUID(), material
 
 const removeViDiacritics = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
 
-// Suggest dropdown component
-function SuggestInput({ value, onChange, onSelect, suggestions, placeholder, disabled }: {
-  value: string; onChange: (v: string) => void; onSelect: (item: MaterialSuggest) => void;
-  suggestions: MaterialSuggest[]; placeholder?: string; disabled?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <Input value={value} onChange={e => { onChange(e.target.value); setOpen(true); }} onFocus={() => value && setOpen(true)}
-        placeholder={placeholder} disabled={disabled} className="h-8 text-sm" />
-      {open && suggestions.length > 0 && (
-        <div className="absolute z-50 top-full left-0 w-full max-h-48 overflow-auto bg-popover border border-border rounded-md shadow-lg mt-1">
-          {suggestions.map(s => (
-            <div key={s.id} className="px-3 py-2 text-sm hover:bg-accent cursor-pointer flex flex-col"
-              onClick={() => { onSelect(s); setOpen(false); }}>
-              <span className="font-medium">{s.name}</span>
-              <span className="text-xs text-muted-foreground">{s.code} — {s.specification} — {s.manufacturer}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// Old SuggestInput removed — now using SuggestInputText component
 
 function BOMSuggestInput({ value, onChange, onSelect, suggestions, placeholder }: {
   value: string; onChange: (v: string) => void; onSelect: (item: BOMMaster) => void;
