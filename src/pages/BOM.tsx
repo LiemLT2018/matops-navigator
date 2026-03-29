@@ -119,8 +119,7 @@ export default function BOMPage() {
   const [formChildBOMs, setFormChildBOMs] = useState<FormChildBOM[]>([emptyChildBOM()]);
   const [formMaterials, setFormMaterials] = useState<FormMaterial[]>([emptyMaterial()]);
 
-  // Suggest states
-  const [matSuggestions, setMatSuggestions] = useState<Record<string, MaterialSuggest[]>>({});
+  // Suggest states (kept for BOM suggest only)
   const [bomSuggestions, setBomSuggestions] = useState<Record<string, BOMMaster[]>>({});
 
   const loadData = useCallback(async () => {
@@ -176,31 +175,25 @@ export default function BOMPage() {
     setEditingBOM(null);
   };
 
-  // Material suggest handler
-  const handleMatNameChange = async (key: string, value: string, index: number) => {
+  // Material suggest handler using SuggestInputText callbacks
+  const handleMatFieldChange = (index: number, field: keyof FormMaterial, value: string) => {
     const updated = [...formMaterials];
-    updated[index] = { ...updated[index], materialName: value, materialCode: '' };
-    setFormMaterials(updated);
-    if (value.length >= 1) {
-      const res = await searchMaterials(value);
-      setMatSuggestions(prev => ({ ...prev, [key]: res.data }));
-      // Auto-select exact match
-      const norm = removeViDiacritics(value);
-      const exact = res.data.find(m => removeViDiacritics(m.name) === norm);
-      if (exact) {
-        updated[index] = { ...updated[index], materialCode: exact.code, materialName: exact.name, specification: exact.specification, unit: exact.unit, manufacturer: exact.manufacturer };
-        setFormMaterials([...updated]);
-      }
-    } else {
-      setMatSuggestions(prev => ({ ...prev, [key]: [] }));
+    updated[index] = { ...updated[index], [field]: value };
+    // Clear materialCode when name changes manually
+    if (field === 'materialName') {
+      updated[index].materialCode = '';
     }
+    setFormMaterials(updated);
   };
 
-  const handleMatSelect = (key: string, mat: MaterialSuggest, index: number) => {
+  const handleMatSuggestSelect = (index: number, field: keyof FormMaterial, item: SuggestData) => {
     const updated = [...formMaterials];
-    updated[index] = { ...updated[index], materialCode: mat.code, materialName: mat.name, specification: mat.specification, unit: mat.unit, manufacturer: mat.manufacturer };
+    if (field === 'materialName') {
+      updated[index] = { ...updated[index], materialName: item.name, materialCode: item.uuid };
+    } else {
+      updated[index] = { ...updated[index], [field]: item.name };
+    }
     setFormMaterials(updated);
-    setMatSuggestions(prev => ({ ...prev, [key]: [] }));
   };
 
   // BOM suggest handler
