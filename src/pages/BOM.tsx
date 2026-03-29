@@ -33,36 +33,7 @@ const removeViDiacritics = (s: string) => s.toLowerCase().normalize('NFD').repla
 
 // Old SuggestInput removed — now using SuggestInputText component
 
-function BOMSuggestInput({ value, onChange, onSelect, suggestions, placeholder }: {
-  value: string; onChange: (v: string) => void; onSelect: (item: BOMMaster) => void;
-  suggestions: BOMMaster[]; placeholder?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <Input value={value} onChange={e => { onChange(e.target.value); setOpen(true); }} onFocus={() => value && setOpen(true)}
-        placeholder={placeholder} className="h-8 text-sm" />
-      {open && suggestions.length > 0 && (
-        <div className="absolute z-50 top-full left-0 w-full max-h-48 overflow-auto bg-popover border border-border rounded-md shadow-lg mt-1">
-          {suggestions.map(s => (
-            <div key={s.id} className="px-3 py-2 text-sm hover:bg-accent cursor-pointer"
-              onClick={() => { onSelect(s); setOpen(false); }}>
-              <span className="font-medium">{s.code}</span> — {s.product}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// BOMSuggestInput removed — now using SuggestInputText with type="bom"
 
 export default function BOMPage() {
   const { t } = useTranslation();
@@ -166,23 +137,16 @@ export default function BOMPage() {
   };
 
   // BOM suggest handler
-  const handleBomNameChange = async (key: string, value: string, index: number) => {
+  const handleBomSuggestSelect = (index: number, item: SuggestData) => {
+    const updated = [...formChildBOMs];
+    updated[index] = { ...updated[index], bomCode: item.uuid, bomName: item.name };
+    setFormChildBOMs(updated);
+  };
+
+  const handleBomNameChange = (index: number, value: string) => {
     const updated = [...formChildBOMs];
     updated[index] = { ...updated[index], bomName: value, bomCode: '' };
     setFormChildBOMs(updated);
-    if (value.length >= 1) {
-      const res = await searchBOMs(value);
-      setBomSuggestions(prev => ({ ...prev, [key]: res.data }));
-    } else {
-      setBomSuggestions(prev => ({ ...prev, [key]: [] }));
-    }
-  };
-
-  const handleBomSelect = (key: string, bom: BOMMaster, index: number) => {
-    const updated = [...formChildBOMs];
-    updated[index] = { ...updated[index], bomCode: bom.code, bomName: bom.product };
-    setFormChildBOMs(updated);
-    setBomSuggestions(prev => ({ ...prev, [key]: [] }));
   };
 
   // Add rows
@@ -313,9 +277,10 @@ export default function BOMPage() {
                   <TableRow key={row._key}>
                     <TableCell className="p-1"><Input value={row.bomCode} disabled className="h-8 text-sm font-mono bg-muted/50" /></TableCell>
                     <TableCell className="p-1">
-                      <BOMSuggestInput value={row.bomName} onChange={v => handleBomNameChange(row._key, v, i)}
-                        onSelect={b => handleBomSelect(row._key, b, i)} suggestions={bomSuggestions[row._key] || []}
-                        placeholder={t('bom.bomName')} />
+                      <SuggestInputText value={row.bomName}
+                        onChange={v => handleBomNameChange(i, v)}
+                        onSelect={item => handleBomSuggestSelect(i, item)}
+                        type="bom" placeholder={t('bom.bomName')} />
                     </TableCell>
                     <TableCell className="p-1">
                       <Input type="number" value={row.quantity} onChange={e => { const u = [...formChildBOMs]; u[i] = { ...u[i], quantity: e.target.value }; setFormChildBOMs(u); }} className="h-8 text-sm" />

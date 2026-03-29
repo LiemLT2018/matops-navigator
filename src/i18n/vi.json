@@ -165,7 +165,21 @@
       "stockQty": "Tồn kho",
       "requestQty": "SL cần mua",
       "addItem": "Thêm vật tư",
-      "newItem": "Vật tư mới (chưa khai báo)"
+      "newItem": "Vật tư mới (chưa khai báo)",
+      "createPR": "Tạo PR",
+      "editPR": "Sửa PR",
+      "materialList": "Danh sách vật tư",
+      "priority": "Ưu tiên",
+      "priorityLow": "Thấp",
+      "priorityNormal": "Bình thường",
+      "priorityHigh": "Cao",
+      "estimatedPrice": "Giá dự kiến",
+      "lastSupplier": "NCC gần nhất",
+      "lastPriceSh": "Giá gần nhất",
+      "importTitle": "Nhập PR từ Excel",
+      "importDesc": "Chọn file Excel chứa danh sách vật tư cần mua",
+      "selectFile": "Chọn file Excel",
+      "downloadTemplate": "Tải Excel mẫu"
     },
     "order": {
       "title": "Đơn mua hàng (Purchase Order)",
