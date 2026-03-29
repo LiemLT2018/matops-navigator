@@ -59,8 +59,8 @@ export default function BOMPage() {
   const [formChildBOMs, setFormChildBOMs] = useState<FormChildBOM[]>([emptyChildBOM()]);
   const [formMaterials, setFormMaterials] = useState<FormMaterial[]>([emptyMaterial()]);
 
-  // Suggest states (kept for BOM suggest only)
-  const [bomSuggestions, setBomSuggestions] = useState<Record<string, BOMMaster[]>>({});
+
+
 
   const loadData = useCallback(async () => {
     const res = await getBOMs({ page, pageSize: 10, status: statusFilter !== 'all' ? statusFilter : undefined, keyword: search || undefined });
