@@ -60,9 +60,9 @@ export default function PurchaseRequestsPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [importOpen, setImportOpen] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [editingPR, setEditingPR] = useState<PurchaseRequest | null>(null);
+  const [editingPR, setEditingPR] = useState<PurchaseRequestHeader | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [prItems, setPrItems] = useState<Record<string, PRItem[]>>({});
+  const [prItems, setPrItems] = useState<Record<string, PurchaseRequestLine[]>>({});
   const [matImportOpen, setMatImportOpen] = useState(false);
 
   // Form state
@@ -73,13 +73,23 @@ export default function PurchaseRequestsPage() {
   const [formNote, setFormNote] = useState('');
   const [formMaterials, setFormMaterials] = useState<FormMaterial[]>([emptyMaterial()]);
 
+  const prStatusMap: Record<number, string> = { 0: 'draft', 1: 'pending', 2: 'approved', 3: 'rejected' };
   const statuses = ['all', 'draft', 'pending', 'approved', 'rejected'];
 
   const loadData = useCallback(async () => {
-    const res = await getPurchaseRequests({ page, pageSize: 10, status: statusFilter !== 'all' ? statusFilter : undefined, keyword: search || undefined });
-    setData(res.data);
-    setTotalPages(res.pagination.totalPages);
-    setTotalCount(res.pagination.totalCount);
+    try {
+      const statusNum = statusFilter !== 'all' ? Object.entries(prStatusMap).find(([, v]) => v === statusFilter)?.[0] : undefined;
+      const res = await purchaseRequestService.list({
+        pageIndex: page, pageSize: 10,
+        status: statusNum !== undefined ? Number(statusNum) : undefined,
+        keyword: search || undefined,
+      });
+      setData(res.items);
+      setTotalPages(res.pagination.totalPage);
+      setTotalCount(res.pagination.totalCount);
+    } catch {
+      setData([]);
+    }
   }, [page, statusFilter, search]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -92,23 +102,27 @@ export default function PurchaseRequestsPage() {
     setShowForm(true);
   };
 
-  const handleEdit = async (row: PurchaseRequest) => {
+  const handleEdit = async (row: PurchaseRequestHeader) => {
     setEditingPR(row);
-    setFormRequester(row.requester);
-    setFormDepartment(row.department);
-    setFormPriority(row.priority);
-    setFormBomRefs(row.bomRefs.join(', '));
-    setFormNote(row.note);
-    const res = await getPRItems(row.id);
-    setFormMaterials(res.data.length > 0
-      ? res.data.map(d => ({
-          _key: crypto.randomUUID(), materialCode: d.materialCode, materialName: d.materialName,
-          materialUuid: d.materialCode, specification: d.specification, unit: d.unit,
-          quantity: String(d.quantity), manufacturer: d.manufacturer,
-          estimatedPrice: String(d.estimatedPrice), stockQty: d.stockQty,
-          lastSupplier: d.lastSupplier, lastPrice: d.lastPrice, note: d.note,
-        }))
-      : [emptyMaterial()]);
+    setFormRequester('');
+    setFormDepartment('');
+    setFormPriority('normal');
+    setFormBomRefs('');
+    setFormNote(row.remark || '');
+    try {
+      const detail = await purchaseRequestService.get(row.uuid);
+      setFormMaterials(detail.lines.length > 0
+        ? detail.lines.map(d => ({
+            _key: crypto.randomUUID(), materialCode: d.mdItemUuid || '', materialName: d.name,
+            materialUuid: d.mdItemUuid || '', specification: '', unit: d.mdUomUuid,
+            quantity: String(d.requestedQty), manufacturer: '',
+            estimatedPrice: '', stockQty: null,
+            lastSupplier: '', lastPrice: null, note: d.remark || '',
+          }))
+        : [emptyMaterial()]);
+    } catch {
+      setFormMaterials([emptyMaterial()]);
+    }
     setShowForm(true);
   };
 
@@ -118,13 +132,15 @@ export default function PurchaseRequestsPage() {
     setShowForm(false); setEditingPR(null);
   };
 
-  const handleExpand = async (id: string) => {
-    if (expandedId === id) { setExpandedId(null); return; }
-    if (!prItems[id]) {
-      const res = await getPRItems(id);
-      setPrItems(prev => ({ ...prev, [id]: res.data }));
+  const handleExpand = async (uuid: string) => {
+    if (expandedId === uuid) { setExpandedId(null); return; }
+    if (!prItems[uuid]) {
+      try {
+        const detail = await purchaseRequestService.get(uuid);
+        setPrItems(prev => ({ ...prev, [uuid]: detail.lines }));
+      } catch { /* handled */ }
     }
-    setExpandedId(id);
+    setExpandedId(uuid);
   };
 
   // Material form handlers
