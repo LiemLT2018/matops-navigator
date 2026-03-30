@@ -342,5 +342,25 @@
     "failed": "Thất bại",
     "unauthorized": "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.",
     "undefined": "Lỗi chưa định nghĩa: {{message}}"
+  },
+  "excelImport": {
+    "title": "Import từ Excel",
+    "desc": "Chọn file Excel, hệ thống sẽ tự bóc tách dữ liệu vật tư",
+    "selectFile": "Chọn file Excel",
+    "downloadTemplate": "Tải Excel mẫu",
+    "templateDownloaded": "Đã tải file mẫu",
+    "parsed": "Đã phân tích",
+    "noData": "File không có dữ liệu",
+    "readError": "Lỗi đọc file Excel",
+    "confirmImport": "Xác nhận Import",
+    "imported": "Đã import",
+    "noImportable": "Không có dòng nào đủ điều kiện import",
+    "suggestions": "Gợi ý",
+    "noFileYet": "Chưa chọn file. Vui lòng chọn file Excel để bắt đầu",
+    "quickAdd": "Thêm nhanh",
+    "addAndMatch": "Thêm & Matching lại",
+    "added": "Đã thêm",
+    "needMaterialFirst": "Cần chọn Vật tư trước khi thêm Quy cách",
+    "importExcelMaterials": "Import Excel"
   }
 }
