@@ -11,11 +11,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { DatePresetSelect } from '@/components/DatePresetSelect';
 import { NumberDisplay } from '@/components/NumberDisplay';
 import { getBOMs, getBOMDetail, getBOMChildRefs, type BOMMaster, type BOMDetail, type BOMChildRef } from '@/api/mockApi';
-import { Plus, Search, ChevronDown, ChevronRight, Upload, LayoutGrid, List, Edit, Copy, Trash2, Download, X, Save } from 'lucide-react';
+import { Plus, Search, ChevronDown, ChevronRight, Upload, LayoutGrid, List, Edit, Copy, Trash2, Download, X, Save, FileSpreadsheet } from 'lucide-react';
 import type { DatePresetKey } from '@/types/api';
 import { toast } from 'sonner';
 import { SuggestInputText } from '@/components/SuggestInputText';
 import type { SuggestData } from '@/api/suggestApi';
+import { ExcelImportPreview } from '@/components/ExcelImportPreview';
+import type { ParsedRow } from '@/utils/excelParser';
 
 type DateFilter = DatePresetKey | 'all';
 
@@ -59,6 +61,8 @@ export default function BOMPage() {
   const [formChildBOMs, setFormChildBOMs] = useState<FormChildBOM[]>([emptyChildBOM()]);
   const [formMaterials, setFormMaterials] = useState<FormMaterial[]>([emptyMaterial()]);
 
+  // Excel import for materials
+  const [matImportOpen, setMatImportOpen] = useState(false);
 
 
 
