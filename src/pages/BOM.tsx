@@ -375,7 +375,10 @@ export default function BOMPage() {
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold">{t('bom.materialList')}</h3>
-            <Button variant="outline" size="sm" onClick={addMaterialRow}><Plus className="h-3 w-3 mr-1" />{t('bom.addRow')}</Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setMatImportOpen(true)}><FileSpreadsheet className="h-3 w-3 mr-1" />{t('excelImport.importExcelMaterials')}</Button>
+              <Button variant="outline" size="sm" onClick={addMaterialRow}><Plus className="h-3 w-3 mr-1" />{t('bom.addRow')}</Button>
+            </div>
           </div>
           <div className="border border-border rounded-md overflow-hidden" data-bom-material-table>
             <Table>
