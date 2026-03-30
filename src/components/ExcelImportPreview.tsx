@@ -397,16 +397,17 @@ export function ExcelImportPreview({ open, onOpenChange, importType, onConfirm }
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10 text-center">#</TableHead>
-                    <TableHead className="min-w-[200px]">Raw Text</TableHead>
-                    <TableHead className="min-w-[140px]">{t('bom.materialName')}</TableHead>
-                    <TableHead className="min-w-[120px]">{t('bom.specification')}</TableHead>
-                    <TableHead className="w-[80px]">{t('bom.quantity')}</TableHead>
-                    <TableHead className="min-w-[90px]">{t('bom.unit')}</TableHead>
-                    <TableHead className="min-w-[120px]">{t('bom.manufacturer')}</TableHead>
-                    <TableHead className="w-[80px]">Status</TableHead>
-                  </TableRow>
+                    <TableRow>
+                     <TableHead className="w-10 text-center">#</TableHead>
+                     <TableHead className="min-w-[200px]">Raw Text</TableHead>
+                     <TableHead className="w-[100px]">Uuid</TableHead>
+                     <TableHead className="min-w-[140px]">{t('bom.materialName')}</TableHead>
+                     <TableHead className="min-w-[120px]">{t('bom.specification')}</TableHead>
+                     <TableHead className="w-[80px]">{t('bom.quantity')}</TableHead>
+                     <TableHead className="min-w-[90px]">{t('bom.unit')}</TableHead>
+                     <TableHead className="min-w-[120px]">{t('bom.manufacturer')}</TableHead>
+                     <TableHead className="w-[80px]">Status</TableHead>
+                    </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.map((row, idx) => (
@@ -415,6 +416,7 @@ export function ExcelImportPreview({ open, onOpenChange, importType, onConfirm }
                     )}>
                       <TableCell className="text-center text-xs text-muted-foreground">{row.rowNum}</TableCell>
                       <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate" title={row.rawText}>{row.rawText}</TableCell>
+                      <TableCell className="text-xs font-mono text-muted-foreground">{row.materialUuid || '-'}</TableCell>
                       <TableCell className="p-1">{renderFieldCell(idx, 'material', row.materialName, !!row.materialUuid)}</TableCell>
                       <TableCell className="p-1">{renderFieldCell(idx, 'specification', row.specification, !!row.specification)}</TableCell>
                       <TableCell className="p-1">
