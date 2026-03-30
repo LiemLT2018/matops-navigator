@@ -61,6 +61,7 @@ export default function PurchaseRequestsPage() {
   const [editingPR, setEditingPR] = useState<PurchaseRequest | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [prItems, setPrItems] = useState<Record<string, PRItem[]>>({});
+  const [matImportOpen, setMatImportOpen] = useState(false);
 
   // Form state
   const [formRequester, setFormRequester] = useState('');
