@@ -64,7 +64,13 @@
     "cancelled": "Cancelled",
     "approved": "Approved",
     "rejected": "Rejected",
-    "draft": "Draft"
+    "draft": "Draft",
+    "required": "Required",
+    "saving": "Saving...",
+    "createSuccess": "Created successfully",
+    "error": "An error occurred",
+    "invalidEmail": "Invalid email",
+    "maxLength": "Max {{max}} characters"
   },
   "datePreset": {
     "today": "Today",
@@ -213,7 +219,8 @@
       "phone": "Phone",
       "email": "Email",
       "address": "Address",
-      "taxCode": "Tax Code"
+      "taxCode": "Tax Code",
+      "createTitle": "Create Supplier"
     }
   },
   "materials": {

@@ -64,7 +64,13 @@
     "cancelled": "Đã hủy",
     "approved": "Đã duyệt",
     "rejected": "Từ chối",
-    "draft": "Nháp"
+    "draft": "Nháp",
+    "required": "Trường bắt buộc",
+    "saving": "Đang lưu...",
+    "createSuccess": "Tạo mới thành công",
+    "error": "Có lỗi xảy ra",
+    "invalidEmail": "Email không hợp lệ",
+    "maxLength": "Tối đa {{max}} ký tự"
   },
   "datePreset": {
     "today": "Hôm nay",
@@ -213,7 +219,8 @@
       "phone": "Điện thoại",
       "email": "Email",
       "address": "Địa chỉ",
-      "taxCode": "Mã số thuế"
+      "taxCode": "Mã số thuế",
+      "createTitle": "Tạo mới Nhà cung cấp"
     }
   },
   "materials": {
