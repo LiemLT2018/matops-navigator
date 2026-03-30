@@ -320,37 +320,31 @@ export default function PurchaseRequestsPage() {
     }
   }, [t]);
 
-  const renderPRDetailTable = (items: PRItem[]) => (
+  const renderPRDetailTable = (items: PurchaseRequestLine[]) => (
     <div className="bg-muted/30 p-4 border-t border-border">
       <h4 className="text-sm font-semibold mb-2 text-foreground">{t('purchasing.request.materialList')} ({items.length})</h4>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('bom.materialCode')}</TableHead>
+            <TableHead>#</TableHead>
             <TableHead>{t('bom.materialName')}</TableHead>
-            <TableHead>{t('bom.specification')}</TableHead>
             <TableHead>{t('bom.unit')}</TableHead>
             <TableHead className="text-right">{t('purchasing.request.requestQty')}</TableHead>
-            <TableHead className="text-right">{t('purchasing.request.stockQty')}</TableHead>
-            <TableHead className="text-right">{t('purchasing.request.estimatedPrice')}</TableHead>
-            <TableHead>{t('purchasing.request.lastSupplier')}</TableHead>
-            <TableHead>{t('bom.manufacturer')}</TableHead>
+            <TableHead className="text-right">Ordered</TableHead>
+            <TableHead>{t('common.status')}</TableHead>
             <TableHead>{t('bom.note')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {items.map(d => (
-            <TableRow key={d.id}>
-              <TableCell className="font-mono text-sm">{d.materialCode || <Badge variant="outline" className="text-xs">{t('purchasing.request.newItem')}</Badge>}</TableCell>
-              <TableCell>{d.materialName}</TableCell>
-              <TableCell className="text-sm text-muted-foreground">{d.specification}</TableCell>
-              <TableCell>{d.unit}</TableCell>
-              <TableCell className="text-right font-mono"><NumberDisplay value={d.quantity} /></TableCell>
-              <TableCell className="text-right font-mono"><NumberDisplay value={d.stockQty} /></TableCell>
-              <TableCell className="text-right font-mono">{formatCurrency(d.estimatedPrice)}</TableCell>
-              <TableCell className="text-sm">{d.lastSupplier || '—'}</TableCell>
-              <TableCell className="text-sm">{d.manufacturer || '—'}</TableCell>
-              <TableCell className="text-sm text-muted-foreground">{d.note}</TableCell>
+            <TableRow key={d.uuid}>
+              <TableCell className="font-mono text-sm">{d.lineNo}</TableCell>
+              <TableCell>{d.name || (d.mdItemUuid ? <span className="font-mono text-xs">{d.mdItemUuid.slice(0, 8)}…</span> : '—')}</TableCell>
+              <TableCell className="font-mono text-xs">{d.mdUomUuid.slice(0, 8)}…</TableCell>
+              <TableCell className="text-right font-mono"><NumberDisplay value={d.requestedQty} /></TableCell>
+              <TableCell className="text-right font-mono"><NumberDisplay value={d.orderedQty} /></TableCell>
+              <TableCell><StatusBadge status={d.status === 0 ? 'open' : 'closed'} /></TableCell>
+              <TableCell className="text-sm text-muted-foreground">{d.remark || '—'}</TableCell>
             </TableRow>
           ))}
         </TableBody>
