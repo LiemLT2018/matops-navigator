@@ -599,6 +599,14 @@ export default function BOMPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Excel Import Preview for Materials */}
+      <ExcelImportPreview
+        open={matImportOpen}
+        onOpenChange={setMatImportOpen}
+        importType="bom_import"
+        onConfirm={handleMatExcelImport}
+      />
     </div>
   );
 }
