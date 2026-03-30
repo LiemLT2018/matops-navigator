@@ -11,11 +11,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { DatePresetSelect } from '@/components/DatePresetSelect';
 import { NumberDisplay } from '@/components/NumberDisplay';
 import { getBOMs, getBOMDetail, getBOMChildRefs, type BOMMaster, type BOMDetail, type BOMChildRef } from '@/api/mockApi';
-import { Plus, Search, ChevronDown, ChevronRight, Upload, LayoutGrid, List, Edit, Copy, Trash2, Download, X, Save } from 'lucide-react';
+import { Plus, Search, ChevronDown, ChevronRight, Upload, LayoutGrid, List, Edit, Copy, Trash2, Download, X, Save, FileSpreadsheet } from 'lucide-react';
 import type { DatePresetKey } from '@/types/api';
 import { toast } from 'sonner';
 import { SuggestInputText } from '@/components/SuggestInputText';
 import type { SuggestData } from '@/api/suggestApi';
+import { ExcelImportPreview } from '@/components/ExcelImportPreview';
+import type { ParsedRow } from '@/utils/excelParser';
 
 type DateFilter = DatePresetKey | 'all';
 
@@ -59,6 +61,8 @@ export default function BOMPage() {
   const [formChildBOMs, setFormChildBOMs] = useState<FormChildBOM[]>([emptyChildBOM()]);
   const [formMaterials, setFormMaterials] = useState<FormMaterial[]>([emptyMaterial()]);
 
+  // Excel import for materials
+  const [matImportOpen, setMatImportOpen] = useState(false);
 
 
 
@@ -200,6 +204,33 @@ export default function BOMPage() {
       }
     }
   }, [formMaterials]);
+
+  // Handle Excel import for materials
+  const handleMatExcelImport = useCallback((parsedRows: ParsedRow[]) => {
+    setFormMaterials(prev => {
+      let current = prev.filter(r => r.materialName || r.quantity);
+      for (const pr of parsedRows) {
+        const existIdx = current.findIndex(r => r.materialCode === pr.materialUuid && r.materialCode);
+        if (existIdx >= 0) {
+          const existing = current[existIdx];
+          current[existIdx] = { ...existing, quantity: String(Number(existing.quantity || 0) + pr.quantity) };
+        } else {
+          current.push({
+            _key: crypto.randomUUID(),
+            materialCode: pr.materialUuid,
+            materialName: pr.materialName,
+            specification: pr.specification,
+            unit: pr.unit,
+            quantity: String(pr.quantity),
+            manufacturer: pr.manufacturer,
+            note: '',
+          });
+        }
+      }
+      if (current.length === 0) current.push(emptyMaterial());
+      return current;
+    });
+  }, []);
 
   const statuses = ['all', 'draft', 'pending', 'in_progress', 'approved', 'completed'];
 
@@ -344,7 +375,10 @@ export default function BOMPage() {
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold">{t('bom.materialList')}</h3>
-            <Button variant="outline" size="sm" onClick={addMaterialRow}><Plus className="h-3 w-3 mr-1" />{t('bom.addRow')}</Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setMatImportOpen(true)}><FileSpreadsheet className="h-3 w-3 mr-1" />{t('excelImport.importExcelMaterials')}</Button>
+              <Button variant="outline" size="sm" onClick={addMaterialRow}><Plus className="h-3 w-3 mr-1" />{t('bom.addRow')}</Button>
+            </div>
           </div>
           <div className="border border-border rounded-md overflow-hidden" data-bom-material-table>
             <Table>
@@ -565,6 +599,14 @@ export default function BOMPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Excel Import Preview for Materials */}
+      <ExcelImportPreview
+        open={matImportOpen}
+        onOpenChange={setMatImportOpen}
+        importType="bom_import"
+        onConfirm={handleMatExcelImport}
+      />
     </div>
   );
 }

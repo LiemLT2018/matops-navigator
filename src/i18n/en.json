@@ -342,5 +342,25 @@
     "failed": "Failed",
     "unauthorized": "Session expired. Please login again.",
     "undefined": "Undefined error: {{message}}"
+  },
+  "excelImport": {
+    "title": "Import from Excel",
+    "desc": "Select an Excel file, the system will auto-parse material data",
+    "selectFile": "Select Excel File",
+    "downloadTemplate": "Download Template",
+    "templateDownloaded": "Template downloaded",
+    "parsed": "Parsed",
+    "noData": "File has no data",
+    "readError": "Error reading Excel file",
+    "confirmImport": "Confirm Import",
+    "imported": "Imported",
+    "noImportable": "No rows eligible for import",
+    "suggestions": "Suggestions",
+    "noFileYet": "No file selected. Please select an Excel file to start",
+    "quickAdd": "Quick Add",
+    "addAndMatch": "Add & Re-match",
+    "added": "Added",
+    "needMaterialFirst": "Must select Material before adding Specification",
+    "importExcelMaterials": "Import Excel"
   }
 }
