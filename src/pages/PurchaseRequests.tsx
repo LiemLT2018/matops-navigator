@@ -624,6 +624,14 @@ export default function PurchaseRequestsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Excel Import Preview for Materials */}
+      <ExcelImportPreview
+        open={matImportOpen}
+        onOpenChange={setMatImportOpen}
+        importType="purchase_request_import"
+        onConfirm={handleMatExcelImport}
+      />
     </div>
   );
 }
