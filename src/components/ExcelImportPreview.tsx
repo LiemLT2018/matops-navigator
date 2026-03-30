@@ -9,7 +9,7 @@ import { Upload, Download, Plus, Check, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import {
-  readExcelFile, parseExcelRows, parseRow, getSuggestions, generateTemplateExcel,
+  readExcelFile, parseExcelRows, parseRow, getSuggestions, getSuggestionsWithScore, generateTemplateExcel,
   genMaterialCodeApi, addMaterialApi, addSpecificationApi, addUnitApi, addManufacturerApi,
   removeViDiacritics, similarity,
   type ParsedRow, type ImportDictionary, type ParseRule, type DictItem,
@@ -95,8 +95,8 @@ export function ExcelImportPreview({ open, onOpenChange, importType, onConfirm }
     toast.success(`${t('excelImport.imported')} ${importable.length} ${t('common.rows')}`);
   }, [rows, onConfirm, onOpenChange, t]);
 
-  // Get suggestions for focused cell
-  const currentSuggestions = (() => {
+  // Get suggestions with scores for focused cell
+  const currentSuggestionsWithScore = (() => {
     if (!focusedCell || !dictionary) return [];
     const row = rows[focusedCell.rowIdx];
     if (!row) return [];
@@ -116,7 +116,7 @@ export function ExcelImportPreview({ open, onOpenChange, importType, onConfirm }
         case 'manufacturer': return dictionary.manufacturers;
       }
     })();
-    return getSuggestions(fieldText, dictItems, 10);
+    return getSuggestionsWithScore(fieldText, dictItems, 10);
   })();
 
   const handleSuggestionClick = useCallback((item: DictItem) => {
@@ -365,17 +365,23 @@ export function ExcelImportPreview({ open, onOpenChange, importType, onConfirm }
           </div>
 
           {/* Suggestion chips */}
-          {focusedCell && currentSuggestions.length > 0 && (
+          {focusedCell && currentSuggestionsWithScore.length > 0 && (
             <div className="flex items-center gap-1 p-2 bg-muted/50 rounded-md border border-border overflow-x-auto">
               <span className="text-xs text-muted-foreground shrink-0 mr-1">{t('excelImport.suggestions')}:</span>
-              {currentSuggestions.map(item => (
+              {currentSuggestionsWithScore.map(({ item, score }) => (
                 <button
                   key={item.uuid}
                   type="button"
-                  className="inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium border bg-background hover:bg-primary hover:text-primary-foreground transition-colors shrink-0 cursor-pointer"
+                  className="inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium border bg-background hover:bg-primary hover:text-primary-foreground transition-colors shrink-0 cursor-pointer gap-1"
                   onClick={() => handleSuggestionClick(item)}
                 >
-                  {item.name}
+                  <span>{item.name}</span>
+                  <span className={cn(
+                    'text-[10px] font-mono',
+                    score >= 0.8 ? 'text-green-600' : score >= 0.5 ? 'text-yellow-600' : 'text-muted-foreground'
+                  )}>
+                    {Math.round(score * 100)}%
+                  </span>
                 </button>
               ))}
             </div>
@@ -391,16 +397,17 @@ export function ExcelImportPreview({ open, onOpenChange, importType, onConfirm }
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10 text-center">#</TableHead>
-                    <TableHead className="min-w-[200px]">Raw Text</TableHead>
-                    <TableHead className="min-w-[140px]">{t('bom.materialName')}</TableHead>
-                    <TableHead className="min-w-[120px]">{t('bom.specification')}</TableHead>
-                    <TableHead className="w-[80px]">{t('bom.quantity')}</TableHead>
-                    <TableHead className="min-w-[90px]">{t('bom.unit')}</TableHead>
-                    <TableHead className="min-w-[120px]">{t('bom.manufacturer')}</TableHead>
-                    <TableHead className="w-[80px]">Status</TableHead>
-                  </TableRow>
+                    <TableRow>
+                     <TableHead className="w-10 text-center">#</TableHead>
+                     <TableHead className="min-w-[200px]">Raw Text</TableHead>
+                     <TableHead className="w-[100px]">Uuid</TableHead>
+                     <TableHead className="min-w-[140px]">{t('bom.materialName')}</TableHead>
+                     <TableHead className="min-w-[120px]">{t('bom.specification')}</TableHead>
+                     <TableHead className="w-[80px]">{t('bom.quantity')}</TableHead>
+                     <TableHead className="min-w-[90px]">{t('bom.unit')}</TableHead>
+                     <TableHead className="min-w-[120px]">{t('bom.manufacturer')}</TableHead>
+                     <TableHead className="w-[80px]">Status</TableHead>
+                    </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.map((row, idx) => (
@@ -409,6 +416,7 @@ export function ExcelImportPreview({ open, onOpenChange, importType, onConfirm }
                     )}>
                       <TableCell className="text-center text-xs text-muted-foreground">{row.rowNum}</TableCell>
                       <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate" title={row.rawText}>{row.rawText}</TableCell>
+                      <TableCell className="text-xs font-mono text-muted-foreground">{row.materialUuid || '-'}</TableCell>
                       <TableCell className="p-1">{renderFieldCell(idx, 'material', row.materialName, !!row.materialUuid)}</TableCell>
                       <TableCell className="p-1">{renderFieldCell(idx, 'specification', row.specification, !!row.specification)}</TableCell>
                       <TableCell className="p-1">

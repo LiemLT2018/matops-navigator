@@ -233,53 +233,61 @@ export function similarity(a: string, b: string): number {
   return (2 * inter) / (ba.size + bb.size);
 }
 
-// ── Match dictionary ──
-function matchDict(text: string, items: DictItem[], threshold = 0.4): { item: DictItem; score: number } | null {
-  const norm = removeViDiacritics(text);
-  let best: { item: DictItem; score: number } | null = null;
+// ── Match dictionary (EXACT only: normalizedName or alias must be fully contained as whole word) ──
+function matchDictExact(text: string, items: DictItem[]): { item: DictItem; score: number } | null {
+  const norm = removeViDiacritics(text).replace(/\s+/g, ' ').trim();
 
   for (const item of items) {
-    // Exact match
+    // Exact full match
     if (norm === item.normalizedName) return { item, score: 1 };
-    // Contains match
-    if (norm.includes(item.normalizedName) || item.normalizedName.includes(norm)) {
-      const s = Math.max(0.7, similarity(text, item.name));
-      if (!best || s > best.score) best = { item, score: s };
-      continue;
-    }
-    // Alias match
+    // Check aliases exact full match
     for (const alias of item.aliases) {
-      const aliasNorm = removeViDiacritics(alias);
-      if (norm.includes(aliasNorm) || aliasNorm.includes(norm)) {
-        const s = Math.max(0.6, similarity(text, alias));
-        if (!best || s > best.score) best = { item, score: s };
-        break;
-      }
-    }
-    // Similarity match
-    const s = similarity(text, item.name);
-    if (s >= threshold && (!best || s > best.score)) {
-      best = { item, score: s };
+      const aliasNorm = removeViDiacritics(alias).replace(/\s+/g, ' ').trim();
+      if (norm === aliasNorm) return { item, score: 1 };
     }
   }
 
-  return best && best.score >= threshold ? best : null;
+  // Check if normalizedName or alias appears as a whole segment in text
+  for (const item of items) {
+    if (item.normalizedName.length < 2) continue;
+    // normalizedName must match as whole word/segment
+    const nameRe = new RegExp(`(^|\\s)${escapeRegex(item.normalizedName)}($|\\s)`, 'i');
+    if (nameRe.test(norm)) return { item, score: 1 };
+    for (const alias of item.aliases) {
+      const aliasNorm = removeViDiacritics(alias).replace(/\s+/g, ' ').trim();
+      if (aliasNorm.length < 2) continue;
+      const aliasRe = new RegExp(`(^|\\s)${escapeRegex(aliasNorm)}($|\\s)`, 'i');
+      if (aliasRe.test(norm)) return { item, score: 1 };
+    }
+  }
+
+  return null;
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // ── Get top suggestions for a field ──
-export function getSuggestions(text: string, items: DictItem[], limit = 10): DictItem[] {
-  if (!text.trim()) return items.slice(0, limit);
+export function getSuggestionsWithScore(text: string, items: DictItem[], limit = 10): { item: DictItem; score: number }[] {
+  if (!text.trim()) return items.slice(0, limit).map(item => ({ item, score: 0 }));
   const norm = removeViDiacritics(text);
   const scored = items.map(item => {
     let score = similarity(text, item.name);
-    if (item.normalizedName.includes(norm) || norm.includes(item.normalizedName)) score = Math.max(score, 0.7);
+    if (item.normalizedName === norm) score = 1;
+    else if (item.normalizedName.includes(norm) || norm.includes(item.normalizedName)) score = Math.max(score, 0.7);
     for (const alias of item.aliases) {
       const aliasNorm = removeViDiacritics(alias);
+      if (aliasNorm === norm) { score = 1; break; }
       if (aliasNorm.includes(norm) || norm.includes(aliasNorm)) score = Math.max(score, 0.6);
     }
     return { item, score };
   }).filter(s => s.score > 0.1).sort((a, b) => b.score - a.score);
-  return scored.slice(0, limit).map(s => s.item);
+  return scored.slice(0, limit);
+}
+
+export function getSuggestions(text: string, items: DictItem[], limit = 10): DictItem[] {
+  return getSuggestionsWithScore(text, items, limit).map(s => s.item);
 }
 
 // ── Parse a single text row ──
@@ -316,7 +324,7 @@ export function parseRow(
       // Normalize: remove trailing mm if already part of dimensions
       if (!/mm$/i.test(specText)) specText += 'mm';
       // Try to match against known specs
-      const specMatch = matchDict(specText, dict.specifications, 0.3);
+      const specMatch = matchDictExact(specText, dict.specifications);
       row.specification = specMatch ? specMatch.item.name : specText;
       remaining = remaining.replace(m[0], ' ').trim();
       break;
@@ -332,7 +340,7 @@ export function parseRow(
       const qtyStr = m[1].replace(',', '.');
       row.quantity = parseFloat(qtyStr) || 0;
       const unitText = m[2].trim();
-      const unitMatch = matchDict(unitText, dict.units, 0.3);
+      const unitMatch = matchDictExact(unitText, dict.units);
       if (unitMatch) {
         row.unit = unitMatch.item.name;
         row.unitUuid = unitMatch.item.uuid;
@@ -348,7 +356,7 @@ export function parseRow(
   remaining = normalizeText(remaining);
   if (remaining) {
     // Try material match
-    const matMatch = matchDict(remaining, dict.materials, 0.3);
+    const matMatch = matchDictExact(remaining, dict.materials);
     if (matMatch) {
       row.materialName = matMatch.item.name;
       row.materialUuid = matMatch.item.uuid;
@@ -374,7 +382,7 @@ export function parseRow(
     // Try manufacturer match on remaining
     remaining = normalizeText(remaining);
     if (remaining) {
-      const mfrMatch = matchDict(remaining, dict.manufacturers, 0.3);
+      const mfrMatch = matchDictExact(remaining, dict.manufacturers);
       if (mfrMatch) {
         row.manufacturer = mfrMatch.item.name;
         row.manufacturerUuid = mfrMatch.item.uuid;
