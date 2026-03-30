@@ -51,7 +51,7 @@ const isMaterialRowComplete = (row: FormMaterial) => row.materialName && row.qua
 
 export default function PurchaseRequestsPage() {
   const { t } = useTranslation();
-  const [data, setData] = useState<PurchaseRequest[]>([]);
+  const [data, setData] = useState<PurchaseRequestHeader[]>([]);
   const [search, setSearch] = useState('');
   const [preset, setPreset] = useState<DateFilter>('all');
   const [statusFilter, setStatusFilter] = useState('all');
