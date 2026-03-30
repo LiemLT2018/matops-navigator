@@ -196,9 +196,9 @@ export function readExcelFile(file: File): Promise<string[]> {
         const data = new Uint8Array(e.target!.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { header: 1 });
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown[][];
         const rows: string[] = [];
-        for (const row of jsonData as unknown[][]) {
+        for (const row of jsonData) {
           if (!row || row.length === 0) continue;
           // Join all cells in a row into one text line
           const text = row.map(cell => String(cell ?? '').trim()).filter(Boolean).join(' ');
