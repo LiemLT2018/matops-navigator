@@ -5,13 +5,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StatusBadge } from '@/components/StatusBadge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, Search } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Plus, Search, X } from 'lucide-react';
 import { companyService } from '@/api/services';
-import type { CompanyDetail } from '@/types/models';
+import type { CompanyDetail, CompanyCreateBody } from '@/types/models';
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink,
   PaginationNext, PaginationPrevious,
 } from '@/components/ui/pagination';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+import { toast } from 'sonner';
+
+const emptyForm: CompanyCreateBody = {
+  code: '', name: '', shortName: '', taxCode: '', phone: '', email: '', address: '', status: 1,
+};
 
 export default function SuppliersPage() {
   const { t } = useTranslation();
@@ -21,6 +30,11 @@ export default function SuppliersPage() {
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
   const pageSize = 20;
+
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState<CompanyCreateBody>({ ...emptyForm });
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const load = (pg = page, kw = keyword) => {
     setLoading(true);
@@ -38,11 +52,54 @@ export default function SuppliersPage() {
   const handleSearch = () => { setPage(1); load(1, keyword); };
   const goPage = (p: number) => { setPage(p); load(p); };
 
+  const setField = (key: keyof CompanyCreateBody, val: string | number) => {
+    setForm(prev => ({ ...prev, [key]: val }));
+    setErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
+  };
+
+  const validate = (): boolean => {
+    const e: Record<string, string> = {};
+    if (!form.code.trim()) e.code = t('common.required');
+    else if (form.code.trim().length > 50) e.code = t('common.maxLength', { max: 50 });
+    if (!form.name.trim()) e.name = t('common.required');
+    else if (form.name.trim().length > 200) e.name = t('common.maxLength', { max: 200 });
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = t('common.invalidEmail');
+    if (form.phone && form.phone.length > 20) e.phone = t('common.maxLength', { max: 20 });
+    if (form.taxCode && form.taxCode.length > 20) e.taxCode = t('common.maxLength', { max: 20 });
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleCreate = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    try {
+      await companyService.create({
+        ...form,
+        code: form.code.trim().toUpperCase(),
+        name: form.name.trim(),
+      });
+      toast.success(t('common.createSuccess'));
+      setOpen(false);
+      setForm({ ...emptyForm });
+      setErrors({});
+      load(1);
+    } catch (err: any) {
+      const msg = err?.response?.data?.errorMessage;
+      if (msg) toast.error(msg);
+      else toast.error(t('common.error'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openCreate = () => { setForm({ ...emptyForm }); setErrors({}); setOpen(true); };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">{t('partners.suppliers.title')}</h1>
-        <Button size="sm"><Plus className="mr-1 h-4 w-4" />{t('common.create')}</Button>
+        <Button size="sm" onClick={openCreate}><Plus className="mr-1 h-4 w-4" />{t('common.create')}</Button>
       </div>
       <Card>
         <CardHeader className="pb-3">
@@ -112,6 +169,104 @@ export default function SuppliersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Create Supplier Dialog */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('partners.suppliers.createTitle')}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="code" className="text-sm font-medium">
+                  {t('partners.suppliers.code')} <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="code"
+                  value={form.code}
+                  onChange={e => setField('code', e.target.value)}
+                  placeholder="VD: ACME"
+                  className={errors.code ? 'border-destructive' : ''}
+                  maxLength={50}
+                />
+                {errors.code && <p className="text-xs text-destructive">{errors.code}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="text-sm font-medium">
+                  {t('partners.suppliers.name')} <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  value={form.name}
+                  onChange={e => setField('name', e.target.value)}
+                  placeholder="VD: ACME JSC"
+                  className={errors.name ? 'border-destructive' : ''}
+                  maxLength={200}
+                />
+                {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="shortName" className="text-sm font-medium">{t('partners.suppliers.contact')}</Label>
+                <Input id="shortName" value={form.shortName ?? ''} onChange={e => setField('shortName', e.target.value)} placeholder="Tên viết tắt" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="taxCode" className="text-sm font-medium">{t('partners.suppliers.taxCode')}</Label>
+                <Input
+                  id="taxCode"
+                  value={form.taxCode ?? ''}
+                  onChange={e => setField('taxCode', e.target.value)}
+                  placeholder="VD: 0101234567"
+                  className={errors.taxCode ? 'border-destructive' : ''}
+                  maxLength={20}
+                />
+                {errors.taxCode && <p className="text-xs text-destructive">{errors.taxCode}</p>}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="phone" className="text-sm font-medium">{t('partners.suppliers.phone')}</Label>
+                <Input
+                  id="phone"
+                  value={form.phone ?? ''}
+                  onChange={e => setField('phone', e.target.value)}
+                  placeholder="VD: 0900000000"
+                  className={errors.phone ? 'border-destructive' : ''}
+                  maxLength={20}
+                />
+                {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-sm font-medium">{t('partners.suppliers.email')}</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={form.email ?? ''}
+                  onChange={e => setField('email', e.target.value)}
+                  placeholder="VD: info@acme.com"
+                  className={errors.email ? 'border-destructive' : ''}
+                  maxLength={255}
+                />
+                {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="address" className="text-sm font-medium">{t('partners.suppliers.address')}</Label>
+              <Input id="address" value={form.address ?? ''} onChange={e => setField('address', e.target.value)} placeholder="Địa chỉ" maxLength={500} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
+              <X className="mr-1 h-4 w-4" />{t('common.cancel')}
+            </Button>
+            <Button onClick={handleCreate} disabled={saving}>
+              {saving ? t('common.saving') : t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
