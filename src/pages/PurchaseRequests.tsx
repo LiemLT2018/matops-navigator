@@ -9,7 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { getPurchaseRequests, getPRItems, getMaterialStockInfo, getBOMAllMaterials, type PurchaseRequest, type PRItem, type MaterialStockInfo, type BOMFlatMaterial } from '@/api/mockApi';
+import { getMaterialStockInfo, getBOMAllMaterials, type PRItem, type BOMFlatMaterial } from '@/api/mockApi';
+import { purchaseRequestService } from '@/api/services';
+import type { PurchaseRequestHeader, PurchaseRequestLine } from '@/types/models';
 import { formatCurrency } from '@/utils/formatNumber';
 import { NumberDisplay } from '@/components/NumberDisplay';
 import { Plus, Search, Upload, Download, Edit, Copy, Trash2, X, Save, ChevronDown, ChevronRight, FileSpreadsheet } from 'lucide-react';
@@ -49,7 +51,7 @@ const isMaterialRowComplete = (row: FormMaterial) => row.materialName && row.qua
 
 export default function PurchaseRequestsPage() {
   const { t } = useTranslation();
-  const [data, setData] = useState<PurchaseRequest[]>([]);
+  const [data, setData] = useState<PurchaseRequestHeader[]>([]);
   const [search, setSearch] = useState('');
   const [preset, setPreset] = useState<DateFilter>('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -58,9 +60,9 @@ export default function PurchaseRequestsPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [importOpen, setImportOpen] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [editingPR, setEditingPR] = useState<PurchaseRequest | null>(null);
+  const [editingPR, setEditingPR] = useState<PurchaseRequestHeader | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [prItems, setPrItems] = useState<Record<string, PRItem[]>>({});
+  const [prItems, setPrItems] = useState<Record<string, PurchaseRequestLine[]>>({});
   const [matImportOpen, setMatImportOpen] = useState(false);
 
   // Form state
@@ -71,13 +73,23 @@ export default function PurchaseRequestsPage() {
   const [formNote, setFormNote] = useState('');
   const [formMaterials, setFormMaterials] = useState<FormMaterial[]>([emptyMaterial()]);
 
+  const prStatusMap: Record<number, string> = { 0: 'draft', 1: 'pending', 2: 'approved', 3: 'rejected' };
   const statuses = ['all', 'draft', 'pending', 'approved', 'rejected'];
 
   const loadData = useCallback(async () => {
-    const res = await getPurchaseRequests({ page, pageSize: 10, status: statusFilter !== 'all' ? statusFilter : undefined, keyword: search || undefined });
-    setData(res.data);
-    setTotalPages(res.pagination.totalPages);
-    setTotalCount(res.pagination.totalCount);
+    try {
+      const statusNum = statusFilter !== 'all' ? Object.entries(prStatusMap).find(([, v]) => v === statusFilter)?.[0] : undefined;
+      const res = await purchaseRequestService.list({
+        pageIndex: page, pageSize: 10,
+        status: statusNum !== undefined ? Number(statusNum) : undefined,
+        keyword: search || undefined,
+      });
+      setData(res.items);
+      setTotalPages(res.pagination.totalPage);
+      setTotalCount(res.pagination.totalCount);
+    } catch {
+      setData([]);
+    }
   }, [page, statusFilter, search]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -90,23 +102,27 @@ export default function PurchaseRequestsPage() {
     setShowForm(true);
   };
 
-  const handleEdit = async (row: PurchaseRequest) => {
+  const handleEdit = async (row: PurchaseRequestHeader) => {
     setEditingPR(row);
-    setFormRequester(row.requester);
-    setFormDepartment(row.department);
-    setFormPriority(row.priority);
-    setFormBomRefs(row.bomRefs.join(', '));
-    setFormNote(row.note);
-    const res = await getPRItems(row.id);
-    setFormMaterials(res.data.length > 0
-      ? res.data.map(d => ({
-          _key: crypto.randomUUID(), materialCode: d.materialCode, materialName: d.materialName,
-          materialUuid: d.materialCode, specification: d.specification, unit: d.unit,
-          quantity: String(d.quantity), manufacturer: d.manufacturer,
-          estimatedPrice: String(d.estimatedPrice), stockQty: d.stockQty,
-          lastSupplier: d.lastSupplier, lastPrice: d.lastPrice, note: d.note,
-        }))
-      : [emptyMaterial()]);
+    setFormRequester('');
+    setFormDepartment('');
+    setFormPriority('normal');
+    setFormBomRefs('');
+    setFormNote(row.remark || '');
+    try {
+      const detail = await purchaseRequestService.get(row.uuid);
+      setFormMaterials(detail.lines.length > 0
+        ? detail.lines.map(d => ({
+            _key: crypto.randomUUID(), materialCode: d.mdItemUuid || '', materialName: d.name,
+            materialUuid: d.mdItemUuid || '', specification: '', unit: d.mdUomUuid,
+            quantity: String(d.requestedQty), manufacturer: '',
+            estimatedPrice: '', stockQty: null,
+            lastSupplier: '', lastPrice: null, note: d.remark || '',
+          }))
+        : [emptyMaterial()]);
+    } catch {
+      setFormMaterials([emptyMaterial()]);
+    }
     setShowForm(true);
   };
 
@@ -116,13 +132,15 @@ export default function PurchaseRequestsPage() {
     setShowForm(false); setEditingPR(null);
   };
 
-  const handleExpand = async (id: string) => {
-    if (expandedId === id) { setExpandedId(null); return; }
-    if (!prItems[id]) {
-      const res = await getPRItems(id);
-      setPrItems(prev => ({ ...prev, [id]: res.data }));
+  const handleExpand = async (uuid: string) => {
+    if (expandedId === uuid) { setExpandedId(null); return; }
+    if (!prItems[uuid]) {
+      try {
+        const detail = await purchaseRequestService.get(uuid);
+        setPrItems(prev => ({ ...prev, [uuid]: detail.lines }));
+      } catch { /* handled */ }
     }
-    setExpandedId(id);
+    setExpandedId(uuid);
   };
 
   // Material form handlers
@@ -302,37 +320,31 @@ export default function PurchaseRequestsPage() {
     }
   }, [t]);
 
-  const renderPRDetailTable = (items: PRItem[]) => (
+  const renderPRDetailTable = (items: PurchaseRequestLine[]) => (
     <div className="bg-muted/30 p-4 border-t border-border">
       <h4 className="text-sm font-semibold mb-2 text-foreground">{t('purchasing.request.materialList')} ({items.length})</h4>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('bom.materialCode')}</TableHead>
+            <TableHead>#</TableHead>
             <TableHead>{t('bom.materialName')}</TableHead>
-            <TableHead>{t('bom.specification')}</TableHead>
             <TableHead>{t('bom.unit')}</TableHead>
             <TableHead className="text-right">{t('purchasing.request.requestQty')}</TableHead>
-            <TableHead className="text-right">{t('purchasing.request.stockQty')}</TableHead>
-            <TableHead className="text-right">{t('purchasing.request.estimatedPrice')}</TableHead>
-            <TableHead>{t('purchasing.request.lastSupplier')}</TableHead>
-            <TableHead>{t('bom.manufacturer')}</TableHead>
+            <TableHead className="text-right">Ordered</TableHead>
+            <TableHead>{t('common.status')}</TableHead>
             <TableHead>{t('bom.note')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {items.map(d => (
-            <TableRow key={d.id}>
-              <TableCell className="font-mono text-sm">{d.materialCode || <Badge variant="outline" className="text-xs">{t('purchasing.request.newItem')}</Badge>}</TableCell>
-              <TableCell>{d.materialName}</TableCell>
-              <TableCell className="text-sm text-muted-foreground">{d.specification}</TableCell>
-              <TableCell>{d.unit}</TableCell>
-              <TableCell className="text-right font-mono"><NumberDisplay value={d.quantity} /></TableCell>
-              <TableCell className="text-right font-mono"><NumberDisplay value={d.stockQty} /></TableCell>
-              <TableCell className="text-right font-mono">{formatCurrency(d.estimatedPrice)}</TableCell>
-              <TableCell className="text-sm">{d.lastSupplier || '—'}</TableCell>
-              <TableCell className="text-sm">{d.manufacturer || '—'}</TableCell>
-              <TableCell className="text-sm text-muted-foreground">{d.note}</TableCell>
+            <TableRow key={d.uuid}>
+              <TableCell className="font-mono text-sm">{d.lineNo}</TableCell>
+              <TableCell>{d.name || (d.mdItemUuid ? <span className="font-mono text-xs">{d.mdItemUuid.slice(0, 8)}…</span> : '—')}</TableCell>
+              <TableCell className="font-mono text-xs">{d.mdUomUuid.slice(0, 8)}…</TableCell>
+              <TableCell className="text-right font-mono"><NumberDisplay value={d.requestedQty} /></TableCell>
+              <TableCell className="text-right font-mono"><NumberDisplay value={d.orderedQty} /></TableCell>
+              <TableCell><StatusBadge status={d.status === 0 ? 'open' : 'closed'} /></TableCell>
+              <TableCell className="text-sm text-muted-foreground">{d.remark || '—'}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -523,48 +535,30 @@ export default function PurchaseRequestsPage() {
               <TableRow>
                 <TableHead className="w-10"></TableHead>
                 <TableHead>{t('purchasing.request.code')}</TableHead>
-                <TableHead>{t('purchasing.request.requester')}</TableHead>
-                <TableHead>{t('purchasing.request.department')}</TableHead>
                 <TableHead>{t('purchasing.request.date')}</TableHead>
-                <TableHead>{t('purchasing.request.bomRef')}</TableHead>
-                <TableHead className="text-right">{t('purchasing.order.totalAmount')}</TableHead>
-                <TableHead>{t('purchasing.request.priority')}</TableHead>
-                <TableHead>{t('purchasing.request.status')}</TableHead>
+                <TableHead>{t('common.status')}</TableHead>
+                <TableHead>{t('bom.note')}</TableHead>
                 <TableHead className="w-[100px]">{t('common.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.length === 0 ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">{t('common.noData')}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t('common.noData')}</TableCell></TableRow>
               ) : data.map(row => (
-                <Collapsible key={row.id} open={expandedId === row.id} asChild>
+                <Collapsible key={row.uuid} open={expandedId === row.uuid} asChild>
                   <>
-                    <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => handleExpand(row.id)}>
+                    <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => handleExpand(row.uuid)}>
                       <TableCell>
                         <CollapsibleTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => { e.stopPropagation(); handleExpand(row.id); }}>
-                            {expandedId === row.id ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => { e.stopPropagation(); handleExpand(row.uuid); }}>
+                            {expandedId === row.uuid ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </Button>
                         </CollapsibleTrigger>
                       </TableCell>
                       <TableCell className="font-mono text-sm font-medium">{row.code}</TableCell>
-                      <TableCell>{row.requester}</TableCell>
-                      <TableCell>{row.department}</TableCell>
-                      <TableCell className="font-mono text-sm">{row.date}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1 flex-wrap">
-                          {row.bomRefs.map(ref => (
-                            <Badge key={ref} variant="outline" className="text-xs font-mono">{ref}</Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">{formatCurrency(row.totalAmount)}</TableCell>
-                      <TableCell>
-                        <Badge variant={row.priority === 'high' ? 'destructive' : row.priority === 'low' ? 'secondary' : 'outline'} className="text-xs">
-                          {t(`purchasing.request.priority${row.priority.charAt(0).toUpperCase() + row.priority.slice(1)}`)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell><StatusBadge status={row.status} /></TableCell>
+                      <TableCell className="font-mono text-sm">{row.requestDate?.slice(0, 10)}</TableCell>
+                      <TableCell><StatusBadge status={prStatusMap[row.status] || 'draft'} /></TableCell>
+                      <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{row.remark || '—'}</TableCell>
                       <TableCell>
                         <div className="flex gap-1" onClick={e => e.stopPropagation()}>
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(row)} title={t('common.edit')}><Edit className="h-3.5 w-3.5" /></Button>
@@ -575,8 +569,8 @@ export default function PurchaseRequestsPage() {
                     </TableRow>
                     <CollapsibleContent asChild>
                       <tr>
-                        <td colSpan={10} className="p-0">
-                          {prItems[row.id] && renderPRDetailTable(prItems[row.id])}
+                        <td colSpan={6} className="p-0">
+                          {prItems[row.uuid] && renderPRDetailTable(prItems[row.uuid])}
                         </td>
                       </tr>
                     </CollapsibleContent>
