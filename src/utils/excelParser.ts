@@ -324,7 +324,7 @@ export function parseRow(
       // Normalize: remove trailing mm if already part of dimensions
       if (!/mm$/i.test(specText)) specText += 'mm';
       // Try to match against known specs
-      const specMatch = matchDict(specText, dict.specifications, 0.3);
+      const specMatch = matchDictExact(specText, dict.specifications);
       row.specification = specMatch ? specMatch.item.name : specText;
       remaining = remaining.replace(m[0], ' ').trim();
       break;
@@ -340,7 +340,7 @@ export function parseRow(
       const qtyStr = m[1].replace(',', '.');
       row.quantity = parseFloat(qtyStr) || 0;
       const unitText = m[2].trim();
-      const unitMatch = matchDict(unitText, dict.units, 0.3);
+      const unitMatch = matchDictExact(unitText, dict.units);
       if (unitMatch) {
         row.unit = unitMatch.item.name;
         row.unitUuid = unitMatch.item.uuid;
