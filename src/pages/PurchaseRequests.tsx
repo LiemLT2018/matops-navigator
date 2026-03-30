@@ -194,6 +194,43 @@ export default function PurchaseRequestsPage() {
     }
   }, [formMaterials]);
 
+  // Excel import for materials
+  const handleMatExcelImport = useCallback((parsedRows: ParsedRow[]) => {
+    setFormMaterials(prev => {
+      let current = prev.filter(r => r.materialName || r.quantity);
+      for (const pr of parsedRows) {
+        const existIdx = current.findIndex(r =>
+          r.materialCode === pr.materialUuid && r.materialCode &&
+          r.specification === pr.specification && r.unit === pr.unit && r.manufacturer === pr.manufacturer
+        );
+        if (existIdx >= 0) {
+          const existing = current[existIdx];
+          const newQty = Number(existing.quantity || 0) + pr.quantity;
+          const price = Number(existing.estimatedPrice) || 0;
+          current[existIdx] = { ...existing, quantity: String(newQty), estimatedPrice: String(price) };
+        } else {
+          current.push({
+            _key: crypto.randomUUID(),
+            materialCode: pr.materialUuid,
+            materialName: pr.materialName,
+            materialUuid: pr.materialUuid,
+            specification: pr.specification,
+            unit: pr.unit,
+            quantity: String(pr.quantity),
+            manufacturer: pr.manufacturer,
+            estimatedPrice: '',
+            stockQty: null,
+            lastSupplier: '',
+            lastPrice: null,
+            note: '',
+          });
+        }
+      }
+      if (current.length === 0) current.push(emptyMaterial());
+      return current;
+    });
+  }, []);
+
   // BOM suggest for importing materials
   const [bomSuggestValue, setBomSuggestValue] = useState('');
 
@@ -359,6 +396,7 @@ export default function PurchaseRequestsPage() {
                   placeholder={t('purchasing.request.inputFromBom')}
                 />
               </div>
+              <Button variant="outline" size="sm" onClick={() => setMatImportOpen(true)}><FileSpreadsheet className="h-3 w-3 mr-1" />{t('excelImport.importExcelMaterials')}</Button>
               <Button variant="outline" size="sm" onClick={addMaterialRow}><Plus className="h-3 w-3 mr-1" />{t('bom.addRow')}</Button>
             </div>
           </div>
