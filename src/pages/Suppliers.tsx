@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Plus, Search, X } from 'lucide-react';
-import { Textarea } from '../components/ui/textarea';
-import { companyService } from '@/api/services';
-import type { CompanyDetail, CompanyCreateBody } from '@/types/models';
+import { Textarea } from '@/components/ui/textarea';
+import { businessPartnerService, companyService } from '@/api/services';
+import type { BusinessPartnerDetail, BusinessPartnerCreateBody, CompanyCatalog } from '@/types/models';
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink,
   PaginationNext, PaginationPrevious,
@@ -17,15 +17,21 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 
-const emptyForm: CompanyCreateBody = {
-  code: '', name: '', shortName: '', taxCode: '', phone: '', email: '', address: '', description: '', type: 0, status: 1,
+const emptyForm: BusinessPartnerCreateBody = {
+  mdCompanyUuid: '', code: '', name: '',
+  taxCode: '', phone: '', email: '', address: '',
+  contactPerson: '', paymentTerm: '', deliveryTerm: '',
+  status: 1,
 };
 
 export default function SuppliersPage() {
   const { t } = useTranslation();
-  const [data, setData] = useState<CompanyDetail[]>([]);
+  const [data, setData] = useState<BusinessPartnerDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
@@ -33,19 +39,26 @@ export default function SuppliersPage() {
   const pageSize = 20;
 
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<CompanyCreateBody>({ ...emptyForm });
+  const [form, setForm] = useState<BusinessPartnerCreateBody>({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [companies, setCompanies] = useState<CompanyCatalog[]>([]);
 
   const load = (pg = page, kw = keyword) => {
     setLoading(true);
-    companyService.list({ keyword: kw || undefined, isPaging: 1, pageIndex: pg, pageSize, typeFind: 1 })
+    businessPartnerService.list({ keyword: kw || undefined, isPaging: 1, pageIndex: pg, pageSize, typeFind: 1 })
       .then(res => {
-        setData((res.items ?? []) as CompanyDetail[]);
+        setData((res.items ?? []) as BusinessPartnerDetail[]);
         setTotalPage(res.pagination?.totalPage ?? 1);
       })
       .catch(() => setData([]))
       .finally(() => setLoading(false));
+  };
+
+  const loadCompanies = () => {
+    companyService.list({ typeFind: 0, isPaging: 0 })
+      .then(res => setCompanies((res.items ?? []) as CompanyCatalog[]))
+      .catch(() => setCompanies([]));
   };
 
   useEffect(() => { load(1); }, []);
@@ -53,13 +66,14 @@ export default function SuppliersPage() {
   const handleSearch = () => { setPage(1); load(1, keyword); };
   const goPage = (p: number) => { setPage(p); load(p); };
 
-  const setField = (key: keyof CompanyCreateBody, val: string | number) => {
+  const setField = (key: keyof BusinessPartnerCreateBody, val: string | number) => {
     setForm(prev => ({ ...prev, [key]: val }));
     setErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
   };
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
+    if (!form.mdCompanyUuid) e.mdCompanyUuid = t('common.required');
     if (!form.code.trim()) e.code = t('common.required');
     else if (form.code.trim().length > 50) e.code = t('common.maxLength', { max: 50 });
     if (!form.name.trim()) e.name = t('common.required');
@@ -75,7 +89,7 @@ export default function SuppliersPage() {
     if (!validate()) return;
     setSaving(true);
     try {
-      await companyService.create({
+      await businessPartnerService.create({
         ...form,
         code: form.code.trim().toUpperCase(),
         name: form.name.trim(),
@@ -94,7 +108,12 @@ export default function SuppliersPage() {
     }
   };
 
-  const openCreate = () => { setForm({ ...emptyForm }); setErrors({}); setOpen(true); };
+  const openCreate = () => {
+    setForm({ ...emptyForm });
+    setErrors({});
+    loadCompanies();
+    setOpen(true);
+  };
 
   return (
     <div className="space-y-4">
@@ -121,7 +140,7 @@ export default function SuppliersPage() {
               <TableRow>
                 <TableHead>{t('partners.suppliers.code')}</TableHead>
                 <TableHead>{t('partners.suppliers.name')}</TableHead>
-                <TableHead>{t('partners.suppliers.contact')}</TableHead>
+                <TableHead>{t('partners.suppliers.contactPerson')}</TableHead>
                 <TableHead>{t('partners.suppliers.phone')}</TableHead>
                 <TableHead>{t('partners.suppliers.email')}</TableHead>
                 <TableHead>{t('partners.suppliers.taxCode')}</TableHead>
@@ -137,7 +156,7 @@ export default function SuppliersPage() {
                 <TableRow key={item.uuid} className="cursor-pointer hover:bg-muted/50">
                   <TableCell className="font-mono text-xs">{item.code}</TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell>{item.shortName ?? '-'}</TableCell>
+                  <TableCell>{item.contactPerson ?? '-'}</TableCell>
                   <TableCell>{item.phone ?? '-'}</TableCell>
                   <TableCell>{item.email ?? '-'}</TableCell>
                   <TableCell>{item.taxCode ?? '-'}</TableCell>
@@ -177,14 +196,31 @@ export default function SuppliersPage() {
           <DialogHeader>
             <DialogTitle>{t('partners.suppliers.createTitle')}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-1">
+            {/* Company */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">
+                {t('partners.suppliers.company')} <span className="text-destructive">*</span>
+              </Label>
+              <Select value={form.mdCompanyUuid} onValueChange={v => setField('mdCompanyUuid', v)}>
+                <SelectTrigger className={errors.mdCompanyUuid ? 'border-destructive' : ''}>
+                  <SelectValue placeholder={t('partners.suppliers.selectCompany')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map(c => (
+                    <SelectItem key={c.uuid} value={c.uuid}>{c.code} - {c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.mdCompanyUuid && <p className="text-xs text-destructive">{errors.mdCompanyUuid}</p>}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="code" className="text-sm font-medium">
+                <Label className="text-sm font-medium">
                   {t('partners.suppliers.code')} <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="code"
                   value={form.code}
                   onChange={e => setField('code', e.target.value)}
                   placeholder="VD: ACME"
@@ -194,11 +230,10 @@ export default function SuppliersPage() {
                 {errors.code && <p className="text-xs text-destructive">{errors.code}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-sm font-medium">
+                <Label className="text-sm font-medium">
                   {t('partners.suppliers.name')} <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="name"
                   value={form.name}
                   onChange={e => setField('name', e.target.value)}
                   placeholder="VD: ACME JSC"
@@ -208,15 +243,15 @@ export default function SuppliersPage() {
                 {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
               </div>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="shortName" className="text-sm font-medium">{t('partners.suppliers.contact')}</Label>
-                <Input id="shortName" value={form.shortName ?? ''} onChange={e => setField('shortName', e.target.value)} placeholder="Tên viết tắt" />
+                <Label className="text-sm font-medium">{t('partners.suppliers.contactPerson')}</Label>
+                <Input value={form.contactPerson ?? ''} onChange={e => setField('contactPerson', e.target.value)} placeholder="Tên người liên hệ" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="taxCode" className="text-sm font-medium">{t('partners.suppliers.taxCode')}</Label>
+                <Label className="text-sm font-medium">{t('partners.suppliers.taxCode')}</Label>
                 <Input
-                  id="taxCode"
                   value={form.taxCode ?? ''}
                   onChange={e => setField('taxCode', e.target.value)}
                   placeholder="VD: 0101234567"
@@ -226,11 +261,11 @@ export default function SuppliersPage() {
                 {errors.taxCode && <p className="text-xs text-destructive">{errors.taxCode}</p>}
               </div>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="phone" className="text-sm font-medium">{t('partners.suppliers.phone')}</Label>
+                <Label className="text-sm font-medium">{t('partners.suppliers.phone')}</Label>
                 <Input
-                  id="phone"
                   value={form.phone ?? ''}
                   onChange={e => setField('phone', e.target.value)}
                   placeholder="VD: 0900000000"
@@ -240,9 +275,8 @@ export default function SuppliersPage() {
                 {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-sm font-medium">{t('partners.suppliers.email')}</Label>
+                <Label className="text-sm font-medium">{t('partners.suppliers.email')}</Label>
                 <Input
-                  id="email"
                   type="email"
                   value={form.email ?? ''}
                   onChange={e => setField('email', e.target.value)}
@@ -253,13 +287,21 @@ export default function SuppliersPage() {
                 {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
               </div>
             </div>
+
             <div className="space-y-1.5">
-              <Label htmlFor="address" className="text-sm font-medium">{t('partners.suppliers.address')}</Label>
-              <Input id="address" value={form.address ?? ''} onChange={e => setField('address', e.target.value)} placeholder="Địa chỉ" maxLength={500} />
+              <Label className="text-sm font-medium">{t('partners.suppliers.address')}</Label>
+              <Input value={form.address ?? ''} onChange={e => setField('address', e.target.value)} placeholder="Địa chỉ" maxLength={500} />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="description" className="text-sm font-medium">{t('common.description')}</Label>
-              <Textarea id="description" value={form.description ?? ''} onChange={e => setField('description', e.target.value)} placeholder="Ghi chú" rows={3} maxLength={1000} />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">{t('partners.suppliers.paymentTerm')}</Label>
+                <Input value={form.paymentTerm ?? ''} onChange={e => setField('paymentTerm', e.target.value)} placeholder="VD: Net 30" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">{t('partners.suppliers.deliveryTerm')}</Label>
+                <Input value={form.deliveryTerm ?? ''} onChange={e => setField('deliveryTerm', e.target.value)} placeholder="VD: FOB, CIF" />
+              </div>
             </div>
           </div>
           <DialogFooter>
