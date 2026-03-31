@@ -10,6 +10,7 @@ import type { BaseResponse } from '@/types/api';
 import type {
   ApiListData, ListQuery, EdTypeFind,
   CompanyDetail, CompanyCreateBody,
+  BusinessPartnerDetail, BusinessPartnerCreateBody,
   PlantDetail, PlantCreateBody,
   WarehouseDetail, WarehouseCreateBody, WarehouseListQuery,
   WarehouseBinDetail, WarehouseBinCreateBody, WarehouseBinListQuery,

@@ -68,6 +68,35 @@ export interface CompanyCreateBody {
 }
 
 // ============================================================
+// BusinessPartner (Nhà cung cấp / Khách hàng)
+// ============================================================
+
+export interface BusinessPartnerCatalog {
+  id: number; uuid: string; status: number;
+  mdCompanyUuid: string;
+  code: string; name: string;
+  taxCode: string | null;
+  phone: string | null; email: string | null; address: string | null;
+  contactPerson: string | null;
+  paymentTerm: string | null;
+  deliveryTerm: string | null;
+}
+export interface BusinessPartnerDetail extends BusinessPartnerCatalog {
+  createdAt: string; updatedAt: string;
+}
+
+export interface BusinessPartnerCreateBody {
+  mdCompanyUuid: string;
+  code: string; name: string;
+  taxCode?: string | null;
+  phone?: string | null; email?: string | null; address?: string | null;
+  contactPerson?: string | null;
+  paymentTerm?: string | null;
+  deliveryTerm?: string | null;
+  status?: number;
+}
+
+// ============================================================
 // Plant
 // ============================================================
 

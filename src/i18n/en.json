@@ -220,7 +220,12 @@
       "email": "Email",
       "address": "Address",
       "taxCode": "Tax Code",
-      "createTitle": "Create Supplier"
+      "contactPerson": "Contact Person",
+      "paymentTerm": "Payment Term",
+      "deliveryTerm": "Delivery Term",
+      "company": "Company",
+      "createTitle": "Create Supplier",
+      "selectCompany": "Select company"
     }
   },
   "materials": {
