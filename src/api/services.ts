@@ -177,6 +177,19 @@ export const companyService = {
 };
 
 // ============================================================
+// BusinessPartner — api/BusinessPartner
+// ============================================================
+
+export const businessPartnerService = {
+  list: (query?: ListQuery & { mdCompanyUuid?: string }) =>
+    getList<BusinessPartnerDetail>('api/BusinessPartner', query, { mdCompanyUuid: query?.mdCompanyUuid }),
+  get: (uuid: string) => getDetail<BusinessPartnerDetail>(`api/BusinessPartner/${uuid}`),
+  create: (body: BusinessPartnerCreateBody) => create<BusinessPartnerDetail>('api/BusinessPartner', body),
+  update: (uuid: string, body: BusinessPartnerCreateBody) => update<BusinessPartnerDetail>(`api/BusinessPartner/${uuid}`, body),
+  delete: (uuid: string) => remove(`api/BusinessPartner/${uuid}`),
+};
+
+// ============================================================
 // Plant — api/Plant
 // ============================================================
 
