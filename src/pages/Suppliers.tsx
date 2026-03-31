@@ -26,7 +26,7 @@ const emptyForm: BusinessPartnerCreateBody = {
   mdCompanyUuid: '', code: '', name: '',
   taxCode: '', phone: '', email: '', address: '',
   contactPerson: '', paymentTerm: '', deliveryTerm: '',
-  status: 1,
+  status: 1, type: 0,
 };
 
 export default function SuppliersPage() {

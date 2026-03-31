@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 
-const emptyForm: BusinessPartnerCreateBody & { type?: number } = {
+const emptyForm: BusinessPartnerCreateBody = {
   mdCompanyUuid: '', code: '', name: '',
   taxCode: '', phone: '', email: '', address: '',
   contactPerson: '', paymentTerm: '', deliveryTerm: '',
