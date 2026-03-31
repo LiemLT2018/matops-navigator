@@ -256,6 +256,10 @@ export default function SuppliersPage() {
               <Label htmlFor="address" className="text-sm font-medium">{t('partners.suppliers.address')}</Label>
               <Input id="address" value={form.address ?? ''} onChange={e => setField('address', e.target.value)} placeholder="Địa chỉ" maxLength={500} />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="description" className="text-sm font-medium">{t('common.description')}</Label>
+              <Textarea id="description" value={form.description ?? ''} onChange={e => setField('description', e.target.value)} placeholder="Ghi chú" rows={3} maxLength={1000} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
