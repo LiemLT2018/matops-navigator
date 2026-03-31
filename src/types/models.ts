@@ -62,6 +62,8 @@ export interface CompanyCreateBody {
   code: string; name: string;
   shortName?: string | null; taxCode?: string | null;
   phone?: string | null; email?: string | null; address?: string | null;
+  description?: string | null;
+  type?: number;
   status?: number;
 }
 

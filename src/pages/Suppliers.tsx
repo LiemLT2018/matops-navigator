@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Plus, Search, X } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { companyService } from '@/api/services';
 import type { CompanyDetail, CompanyCreateBody } from '@/types/models';
 import {
@@ -19,7 +20,7 @@ import {
 import { toast } from 'sonner';
 
 const emptyForm: CompanyCreateBody = {
-  code: '', name: '', shortName: '', taxCode: '', phone: '', email: '', address: '', status: 1,
+  code: '', name: '', shortName: '', taxCode: '', phone: '', email: '', address: '', description: '', type: 0, status: 1,
 };
 
 export default function SuppliersPage() {
@@ -255,6 +256,10 @@ export default function SuppliersPage() {
             <div className="space-y-1.5">
               <Label htmlFor="address" className="text-sm font-medium">{t('partners.suppliers.address')}</Label>
               <Input id="address" value={form.address ?? ''} onChange={e => setField('address', e.target.value)} placeholder="Địa chỉ" maxLength={500} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="description" className="text-sm font-medium">{t('common.description')}</Label>
+              <Textarea id="description" value={form.description ?? ''} onChange={e => setField('description', e.target.value)} placeholder="Ghi chú" rows={3} maxLength={1000} />
             </div>
           </div>
           <DialogFooter>
