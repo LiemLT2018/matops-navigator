@@ -88,9 +88,8 @@ export default function CustomersPage() {
     if (!validate()) return;
     setSaving(true);
     try {
-      const { type, ...body } = form;
       await businessPartnerService.create({
-        ...body,
+        ...form,
         code: form.code.trim().toUpperCase(),
         name: form.name.trim(),
       });
