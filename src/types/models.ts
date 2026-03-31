@@ -93,6 +93,7 @@ export interface BusinessPartnerCreateBody {
   contactPerson?: string | null;
   paymentTerm?: string | null;
   deliveryTerm?: string | null;
+  type?: number;
   status?: number;
 }
 

@@ -209,7 +209,13 @@
       "phone": "Phone",
       "email": "Email",
       "address": "Address",
-      "taxCode": "Tax Code"
+      "taxCode": "Tax Code",
+      "contactPerson": "Contact Person",
+      "paymentTerm": "Payment Term",
+      "deliveryTerm": "Delivery Term",
+      "company": "Company",
+      "createTitle": "Create Customer",
+      "selectCompany": "Select company"
     },
     "suppliers": {
       "title": "Suppliers",
