@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Plus, Search, X } from 'lucide-react';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } from '../components/ui/textarea';
 import { companyService } from '@/api/services';
 import type { CompanyDetail, CompanyCreateBody } from '@/types/models';
 import {
