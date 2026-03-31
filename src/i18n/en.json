@@ -380,5 +380,16 @@
     "added": "Added",
     "needMaterialFirst": "Must select Material before adding Specification",
     "importExcelMaterials": "Import Excel"
+  },
+  "uom": {
+    "type": "Unit Type",
+    "decimalPlaces": "Decimal Places",
+    "types": {
+      "qty": "Quantity",
+      "length": "Length",
+      "area": "Area",
+      "volume": "Volume",
+      "weight": "Weight"
+    }
   }
 }
