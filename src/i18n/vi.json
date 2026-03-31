@@ -220,7 +220,12 @@
       "email": "Email",
       "address": "Địa chỉ",
       "taxCode": "Mã số thuế",
-      "createTitle": "Tạo mới Nhà cung cấp"
+      "contactPerson": "Người liên hệ",
+      "paymentTerm": "Điều khoản thanh toán",
+      "deliveryTerm": "Điều khoản giao hàng",
+      "company": "Công ty",
+      "createTitle": "Tạo mới Nhà cung cấp",
+      "selectCompany": "Chọn công ty"
     }
   },
   "materials": {

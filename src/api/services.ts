@@ -10,6 +10,7 @@ import type { BaseResponse } from '@/types/api';
 import type {
   ApiListData, ListQuery, EdTypeFind,
   CompanyDetail, CompanyCreateBody,
+  BusinessPartnerDetail, BusinessPartnerCreateBody,
   PlantDetail, PlantCreateBody,
   WarehouseDetail, WarehouseCreateBody, WarehouseListQuery,
   WarehouseBinDetail, WarehouseBinCreateBody, WarehouseBinListQuery,
@@ -173,6 +174,19 @@ export const companyService = {
   create: (body: CompanyCreateBody) => create<CompanyDetail>('api/Company', body),
   update: (uuid: string, body: CompanyCreateBody) => update<CompanyDetail>(`api/Company/${uuid}`, body),
   delete: (uuid: string) => remove(`api/Company/${uuid}`),
+};
+
+// ============================================================
+// BusinessPartner — api/BusinessPartner
+// ============================================================
+
+export const businessPartnerService = {
+  list: (query?: ListQuery & { mdCompanyUuid?: string }) =>
+    getList<BusinessPartnerDetail>('api/BusinessPartner', query, { mdCompanyUuid: query?.mdCompanyUuid }),
+  get: (uuid: string) => getDetail<BusinessPartnerDetail>(`api/BusinessPartner/${uuid}`),
+  create: (body: BusinessPartnerCreateBody) => create<BusinessPartnerDetail>('api/BusinessPartner', body),
+  update: (uuid: string, body: BusinessPartnerCreateBody) => update<BusinessPartnerDetail>(`api/BusinessPartner/${uuid}`, body),
+  delete: (uuid: string) => remove(`api/BusinessPartner/${uuid}`),
 };
 
 // ============================================================
