@@ -19,7 +19,7 @@ import {
 import { toast } from 'sonner';
 
 const emptyForm: CompanyCreateBody = {
-  code: '', name: '', shortName: '', taxCode: '', phone: '', email: '', address: '', status: 1,
+  code: '', name: '', shortName: '', taxCode: '', phone: '', email: '', address: '', description: '', type: 0, status: 1,
 };
 
 export default function SuppliersPage() {
