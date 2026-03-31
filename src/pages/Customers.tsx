@@ -38,7 +38,7 @@ export default function CustomersPage() {
   const pageSize = 20;
 
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ ...emptyForm });
+  const [form, setForm] = useState<BusinessPartnerCreateBody>({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [companies, setCompanies] = useState<CompanyCatalog[]>([]);
