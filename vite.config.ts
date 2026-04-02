@@ -11,13 +11,6 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
-    proxy: {
-      "/api": {
-        target: "https://rmgapi.mobiplus.vn",
-        changeOrigin: true,
-        secure: false,
-      },
-    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
