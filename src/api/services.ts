@@ -251,10 +251,21 @@ export const documentNumberRuleService = {
 // Auth
 // ============================================================
 export const authService = {
+  /** Fetch RSA public key for password encryption */
+  getLoginPublicKey: async () => {
+    const res = await apiClient.get<BaseResponse>('api/Auth/login-public-key');
+    return res.data.data as {
+      publicKeyPem: string;
+      encryption: string;
+      hash: string;
+    };
+  },
+
+  /** Login with RSA-OAEP encrypted password */
   login: async (account: string, encryptedPassword: string) => {
     const res = await apiClient.post<BaseResponse>('api/Auth/login', {
       account,
-      password: encryptedPassword,
+      encryptedPassword,
     });
     return res.data.data as {
       accessToken: string;
