@@ -71,7 +71,6 @@ function createApiClient(): AxiosInstance {
       if (error.response?.status === 401) {
         toast.error(i18n.t("errors.unauthorized"));
         localStorage.removeItem("matops_token");
-        window.location.href = "/login";
       } else {
         toast.error(i18n.t("errors.system"));
       }
