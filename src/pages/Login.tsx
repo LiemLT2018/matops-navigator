@@ -26,7 +26,9 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      const res = await authService.login(username.trim(), encryptPassword(password));
+      const { publicKeyPem } = await authService.getLoginPublicKey();
+      const encrypted = await encryptPasswordRSA(publicKeyPem, password);
+      const res = await authService.login(username.trim(), encrypted);
       localStorage.setItem("matops_token", res.accessToken);
       localStorage.setItem("matops_user", JSON.stringify(res.user));
       toast.success(t("login.success"));
