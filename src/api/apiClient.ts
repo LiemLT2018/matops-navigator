@@ -51,6 +51,7 @@ function createApiClient(): AxiosInstance {
       if (data.errorCode === 401 || data.errorCode === "401") {
         toast.error(i18n.t("errors.unauthorized"));
         localStorage.removeItem("matops_token");
+        window.location.href = "/login";
         return Promise.reject(new Error("Unauthorized"));
       }
       if (data.errorCode !== 0 && data.errorCode !== "0") {
@@ -71,6 +72,7 @@ function createApiClient(): AxiosInstance {
       if (error.response?.status === 401) {
         toast.error(i18n.t("errors.unauthorized"));
         localStorage.removeItem("matops_token");
+        window.location.href = "/login";
       } else {
         toast.error(i18n.t("errors.system"));
       }

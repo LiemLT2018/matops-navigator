@@ -24,6 +24,7 @@ import MaterialUnitsPage from "@/pages/MaterialUnits";
 import ProductGroupsPage from "@/pages/ProductGroups";
 import ProductListPage from "@/pages/ProductList";
 import ProductUnitsPage from "@/pages/ProductUnits";
+import LoginPage from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/product-units" element={<ProductUnitsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
+          <Route path="/login" element={<LoginPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
