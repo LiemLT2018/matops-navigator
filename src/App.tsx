@@ -24,6 +24,7 @@ import MaterialUnitsPage from "@/pages/MaterialUnits";
 import ProductGroupsPage from "@/pages/ProductGroups";
 import ProductListPage from "@/pages/ProductList";
 import ProductUnitsPage from "@/pages/ProductUnits";
+import LoginPage from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
