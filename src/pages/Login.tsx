@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { encryptPassword } from "@/api/apiClient";
 import { authService } from "@/api/services";
+import { encryptPasswordRSA } from "@/utils/rsa";
 
 export default function LoginPage() {
   const { t } = useTranslation();
