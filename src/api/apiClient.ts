@@ -7,7 +7,7 @@ import type { BaseRequest, BaseResponse } from "@/types/api";
 
 function getConfig() {
   const stored = localStorage.getItem("matops_config");
-  const defaults = { BASE_URL: "https://rmgapi.mobiplus.vn", DPS_CERT: "MATOPS_DEFAULT_CERT_2024" };
+  const defaults = { BASE_URL: "", DPS_CERT: "MATOPS_DEFAULT_CERT_2024" };
   if (!stored) return defaults;
   try {
     return { ...defaults, ...JSON.parse(stored) };

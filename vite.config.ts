@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => ({
     },
     proxy: {
       "/api": {
-        target: "http://localhost:5145",
+        target: "https://rmgapi.mobiplus.vn",
         changeOrigin: true,
         secure: false,
       },
