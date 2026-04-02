@@ -58,6 +58,7 @@ const App = () => (
             <Route path="/product-units" element={<ProductUnitsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
+          <Route path="/login" element={<LoginPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

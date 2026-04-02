@@ -246,3 +246,16 @@ export const documentNumberRuleService = {
   update: (uuid: string, body: DocumentNumberRuleCreateBody) => update<DocumentNumberRuleDetail>(`api/DocumentNumberRule/${uuid}`, body),
   delete: (uuid: string) => remove(`api/DocumentNumberRule/${uuid}`),
 };
+
+// ============================================================
+// Auth
+// ============================================================
+export const authService = {
+  login: async (username: string, encryptedPassword: string) => {
+    const res = await apiClient.post<BaseResponse>('api/Auth/login', {
+      username,
+      password: encryptedPassword,
+    });
+    return res.data.data as { token: string; username: string; fullName: string; uuid: string };
+  },
+};
