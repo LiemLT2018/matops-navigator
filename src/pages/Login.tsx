@@ -27,8 +27,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await authService.login(username.trim(), encryptPassword(password));
-      localStorage.setItem("matops_token", res.token);
-      localStorage.setItem("matops_user", JSON.stringify(res));
+      localStorage.setItem("matops_token", res.accessToken);
+      localStorage.setItem("matops_user", JSON.stringify(res.user));
       toast.success(t("login.success"));
       navigate("/", { replace: true });
     } catch {

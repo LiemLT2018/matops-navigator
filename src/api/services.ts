@@ -251,11 +251,16 @@ export const documentNumberRuleService = {
 // Auth
 // ============================================================
 export const authService = {
-  login: async (username: string, encryptedPassword: string) => {
+  login: async (account: string, encryptedPassword: string) => {
     const res = await apiClient.post<BaseResponse>('api/Auth/login', {
-      username,
+      account,
       password: encryptedPassword,
     });
-    return res.data.data as { token: string; username: string; fullName: string; uuid: string };
+    return res.data.data as {
+      accessToken: string;
+      tokenType: string;
+      expiresAtUtc: string;
+      user: { uuid: string; account: string; name: string; mdCompanyUuid: string; mdDepartmentUuid: string | null };
+    };
   },
 };
