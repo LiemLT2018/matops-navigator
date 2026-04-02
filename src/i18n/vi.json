@@ -391,5 +391,17 @@
       "volume": "Thể tích",
       "weight": "Khối lượng"
     }
+  },
+  "login": {
+    "title": "Đăng nhập",
+    "subtitle": "Quản lý vật tư & sản xuất thời gian thực",
+    "username": "Tên đăng nhập",
+    "usernamePlaceholder": "Nhập tên đăng nhập",
+    "password": "Mật khẩu",
+    "passwordPlaceholder": "Nhập mật khẩu",
+    "submit": "Đăng nhập",
+    "loggingIn": "Đang đăng nhập...",
+    "fillAll": "Vui lòng nhập đầy đủ thông tin",
+    "success": "Đăng nhập thành công"
   }
 }

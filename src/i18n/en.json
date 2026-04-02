@@ -391,5 +391,17 @@
       "volume": "Volume",
       "weight": "Weight"
     }
+  },
+  "login": {
+    "title": "Sign In",
+    "subtitle": "Control Material & Manufacturing in Real-Time",
+    "username": "Username",
+    "usernamePlaceholder": "Enter username",
+    "password": "Password",
+    "passwordPlaceholder": "Enter password",
+    "submit": "Sign In",
+    "loggingIn": "Signing in...",
+    "fillAll": "Please fill in all fields",
+    "success": "Login successful"
   }
 }
