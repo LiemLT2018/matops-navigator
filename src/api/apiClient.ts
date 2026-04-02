@@ -36,12 +36,22 @@ function createApiClient(): AxiosInstance {
   });
 
   instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-    const base = getBaseRequest();
-    if (config.data && typeof config.data === "object") {
-      config.data = { ...base, ...config.data };
-    } else {
-      config.data = base;
+    // Attach BaseRequest fields to POST/PUT/DELETE body
+    if (config.method !== "get") {
+      const base = getBaseRequest();
+      if (config.data && typeof config.data === "object") {
+        config.data = { ...base, ...config.data };
+      } else {
+        config.data = base;
+      }
     }
+
+    // Attach Bearer token if available
+    const token = localStorage.getItem("matops_token");
+    if (token) {
+      config.headers.set("Authorization", `Bearer ${token}`);
+    }
+
     return config;
   });
 
