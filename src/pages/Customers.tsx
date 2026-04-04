@@ -45,7 +45,7 @@ export default function CustomersPage() {
 
   const load = (pg = page, kw = keyword) => {
     setLoading(true);
-    businessPartnerService.list({ keyword: kw || undefined, isPaging: 1, pageIndex: pg, pageSize, typeFind: 1 })
+    businessPartnerService.list({ keyword: kw || undefined, isPaging: 1, pageIndex: pg, pageSize, typeFind: 1, type: '0,1' })
       .then(res => {
         setData((res.items ?? []) as BusinessPartnerDetail[]);
         setTotalPage(res.pagination?.totalPage ?? 1);

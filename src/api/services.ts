@@ -181,8 +181,8 @@ export const companyService = {
 // ============================================================
 
 export const businessPartnerService = {
-  list: (query?: ListQuery & { mdCompanyUuid?: string }) =>
-    getList<BusinessPartnerDetail>('api/BusinessPartner', query, { mdCompanyUuid: query?.mdCompanyUuid }),
+  list: (query?: ListQuery & { mdCompanyUuid?: string; type?: string }) =>
+    getList<BusinessPartnerDetail>('api/BusinessPartner', query, { mdCompanyUuid: query?.mdCompanyUuid, type: query?.type }),
   get: (uuid: string) => getDetail<BusinessPartnerDetail>(`api/BusinessPartner/${uuid}`),
   create: (body: BusinessPartnerCreateBody) => create<BusinessPartnerDetail>('api/BusinessPartner', body),
   update: (uuid: string, body: BusinessPartnerCreateBody) => update<BusinessPartnerDetail>(`api/BusinessPartner/${uuid}`, body),

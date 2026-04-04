@@ -46,7 +46,7 @@ export default function SuppliersPage() {
 
   const load = (pg = page, kw = keyword) => {
     setLoading(true);
-    businessPartnerService.list({ keyword: kw || undefined, isPaging: 1, pageIndex: pg, pageSize, typeFind: 1 })
+    businessPartnerService.list({ keyword: kw || undefined, isPaging: 1, pageIndex: pg, pageSize, typeFind: 1, type: '0,2' })
       .then(res => {
         setData((res.items ?? []) as BusinessPartnerDetail[]);
         setTotalPage(res.pagination?.totalPage ?? 1);
