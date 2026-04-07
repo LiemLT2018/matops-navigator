@@ -6,8 +6,7 @@ import axios, {
 import { Md5 } from "ts-md5";
 import { toast } from "sonner";
 import i18n from "@/i18n";
-
-const TOKEN_STORAGE_KEY = "matops_token";
+import { clearAuthSession, getAccessToken } from "@/lib/authStorage";
 
 /** Envelope kiểu Lovable / một số gateway: `{ success, message, data }` */
 export interface SuccessEnvelope<T = unknown> {
@@ -44,11 +43,7 @@ function getMatopsConfig() {
 function resolveToken(): string | null {
   const fromStore = authTokenGetter?.();
   if (fromStore) return fromStore;
-  try {
-    return localStorage.getItem(TOKEN_STORAGE_KEY);
-  } catch {
-    return null;
-  }
+  return getAccessToken();
 }
 
 function acceptLanguageHeader(): string {
@@ -97,6 +92,18 @@ function isMatOpsEnvelope(payload: unknown): payload is MatOpsEnvelope<unknown> 
   if (payload === null || typeof payload !== "object") return false;
   const p = payload as Record<string, unknown>;
   return typeof p.errorCode === "number";
+}
+
+function matOpsUnauthorized(payload: unknown): boolean {
+  if (payload === null || typeof payload !== "object") return false;
+  const c = (payload as Record<string, unknown>).errorCode;
+  return c === 401 || c === "401";
+}
+
+function clearSessionAndRedirectToLogin() {
+  toast.error(i18n.t("errors.unauthorized"));
+  clearAuthSession();
+  window.location.href = "/login";
 }
 
 function createApiClient(): AxiosInstance {
@@ -153,13 +160,12 @@ function createApiClient(): AxiosInstance {
         return response;
       }
 
+      if (matOpsUnauthorized(payload)) {
+        clearSessionAndRedirectToLogin();
+        return Promise.reject(new Error("Unauthorized"));
+      }
+
       if (isMatOpsEnvelope(payload)) {
-        if (payload.errorCode === 401) {
-          toast.error(i18n.t("errors.unauthorized"));
-          localStorage.removeItem(TOKEN_STORAGE_KEY);
-          window.location.href = "/login";
-          return Promise.reject(new Error("Unauthorized"));
-        }
         if (payload.errorCode !== 0) {
           return Promise.reject(new MatOpsApiError(payload.errorCode, payload.errorMessage || ""));
         }
@@ -169,7 +175,19 @@ function createApiClient(): AxiosInstance {
 
       return response;
     },
-    (error) => Promise.reject(error),
+    (error) => {
+      const status = error.response?.status;
+      if (status === 401) {
+        clearSessionAndRedirectToLogin();
+        return Promise.reject(new Error("Unauthorized"));
+      }
+      const data = error.response?.data;
+      if (matOpsUnauthorized(data)) {
+        clearSessionAndRedirectToLogin();
+        return Promise.reject(new Error("Unauthorized"));
+      }
+      return Promise.reject(error);
+    },
   );
 
   return instance;

@@ -402,6 +402,7 @@
     "submit": "Sign In",
     "loggingIn": "Signing in...",
     "fillAll": "Please fill in all fields",
-    "success": "Login successful"
+    "success": "Login successful",
+    "rememberMe": "Stay signed in on this browser"
   }
 }

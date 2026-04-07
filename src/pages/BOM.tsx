@@ -14,6 +14,7 @@ import {
   productBomTemplateService,
   productBomTemplateLineService,
 } from '@/api/services';
+import { getAuthUser } from '@/lib/authStorage';
 import type { ProductBomTemplateLineListRow, ProductBomTemplateListRow } from '@/types/models';
 import { EdTypeFind } from '@/types/models';
 import type { BOMDetail, BOMChildRef } from '@/api/mockApi';
@@ -136,10 +137,7 @@ export default function BOMPage() {
 
   const loadData = useCallback(async () => {
     try {
-      let user: { mdCompanyUuid?: string } = {};
-      try {
-        user = JSON.parse(localStorage.getItem('matops_user') || '{}');
-      } catch { /* ignore */ }
+      const user = getAuthUser();
       const statusNum = bomFilterToStatus[statusFilter];
       const res = await productBomTemplateService.list({
         pageIndex: page,
@@ -148,7 +146,7 @@ export default function BOMPage() {
         typeFind: EdTypeFind.DETAIL_LIST,
         keyword: search || undefined,
         status: statusNum,
-        mdCompanyUuid: user.mdCompanyUuid,
+        mdCompanyUuid: user?.mdCompanyUuid,
       });
       setData(res.items.map(mapTemplateToMaster));
       setTotalPages(res.pagination.totalPage);

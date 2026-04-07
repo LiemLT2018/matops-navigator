@@ -14,6 +14,7 @@ import {
   getTotalAvailableQtyForItem,
   productBomTemplateLineService,
 } from '@/api/services';
+import { getAuthUser } from '@/lib/authStorage';
 import type { ProductBomTemplateLineListRow } from '@/types/models';
 import { EdTypeFind } from '@/types/models';
 import type { PurchaseRequestHeader, PurchaseRequestLine } from '@/types/models';
@@ -168,12 +169,9 @@ export default function PurchaseRequestsPage() {
     if (field === 'materialName') {
       updated[index] = { ...updated[index], materialName: item.name, materialCode: item.uuid, materialUuid: item.uuid };
       setFormMaterials(updated);
-      let user: { mdCompanyUuid?: string } = {};
+      const user = getAuthUser();
       try {
-        user = JSON.parse(localStorage.getItem('matops_user') || '{}');
-      } catch { /* ignore */ }
-      try {
-        const stockQty = await getTotalAvailableQtyForItem(item.uuid, user.mdCompanyUuid);
+        const stockQty = await getTotalAvailableQtyForItem(item.uuid, user?.mdCompanyUuid);
         const u = [...updated];
         u[index] = {
           ...u[index],
@@ -269,10 +267,7 @@ export default function PurchaseRequestsPage() {
 
   const handleBomSuggestSelect = useCallback(async (item: SuggestData) => {
     setBomSuggestValue('');
-    let user: { mdCompanyUuid?: string } = {};
-    try {
-      user = JSON.parse(localStorage.getItem('matops_user') || '{}');
-    } catch { /* ignore */ }
+    const user = getAuthUser();
     try {
       const lineRes = await productBomTemplateLineService.list({
         mdProductBomTemplateUuid: item.uuid,
@@ -319,7 +314,7 @@ export default function PurchaseRequestsPage() {
       for (const bm of flat) {
         if (bm.materialUuid) {
           try {
-            const qty = await getTotalAvailableQtyForItem(bm.materialUuid, user.mdCompanyUuid);
+            const qty = await getTotalAvailableQtyForItem(bm.materialUuid, user?.mdCompanyUuid);
             setFormMaterials(prev => prev.map(r =>
               r.materialUuid === bm.materialUuid
                 ? { ...r, stockQty: qty }

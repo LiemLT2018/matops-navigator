@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -7,8 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { authService } from "@/api/services";
 import { MatOpsApiError } from "@/lib/apiClient";
+import {
+  getAccessToken,
+  isAccessTokenExpired,
+  setAuthSession,
+} from "@/lib/authStorage";
 import { encryptPasswordRSA } from "@/utils/rsa";
 
 export default function LoginPage() {
@@ -18,6 +24,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  useEffect(() => {
+    const token = getAccessToken();
+    if (token && !isAccessTokenExpired()) {
+      navigate("/", { replace: true });
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,8 +44,12 @@ export default function LoginPage() {
       const { publicKeyPem } = await authService.getLoginPublicKey();
       const encrypted = await encryptPasswordRSA(publicKeyPem, password);
       const res = await authService.login(username.trim(), encrypted);
-      localStorage.setItem("matops_token", res.accessToken);
-      localStorage.setItem("matops_user", JSON.stringify(res.user));
+      setAuthSession({
+        accessToken: res.accessToken,
+        user: res.user,
+        expiresAtUtc: res.expiresAtUtc,
+        rememberMe,
+      });
       toast.success(t("login.success"));
       navigate("/", { replace: true });
     } catch (e) {
@@ -102,6 +120,17 @@ export default function LoginPage() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="remember"
+                  checked={rememberMe}
+                  onCheckedChange={(v) => setRememberMe(v === true)}
+                />
+                <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
+                  {t("login.rememberMe")}
+                </Label>
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>

@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/AppLayout";
+import { RequireAuth } from "@/components/RequireAuth";
 import DashboardPage from "@/pages/Dashboard";
 import SalesOrdersPage from "@/pages/SalesOrders";
 import ProductOrdersPage from "@/pages/ProductOrders";
@@ -35,7 +36,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route element={<AppLayout />}>
+          <Route element={<RequireAuth />}>
+            <Route element={<AppLayout />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/sales-orders" element={<SalesOrdersPage />} />
             <Route path="/product-orders" element={<ProductOrdersPage />} />
@@ -57,6 +59,7 @@ const App = () => (
             <Route path="/product-list" element={<ProductListPage />} />
             <Route path="/product-units" element={<ProductUnitsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            </Route>
           </Route>
           <Route path="/login" element={<LoginPage />} />
           <Route path="*" element={<NotFound />} />

@@ -402,6 +402,7 @@
     "submit": "Đăng nhập",
     "loggingIn": "Đang đăng nhập...",
     "fillAll": "Vui lòng nhập đầy đủ thông tin",
-    "success": "Đăng nhập thành công"
+    "success": "Đăng nhập thành công",
+    "rememberMe": "Duy trì đăng nhập trên trình duyệt"
   }
 }
