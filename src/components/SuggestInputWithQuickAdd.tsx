@@ -77,7 +77,7 @@ export function SuggestInputWithQuickAdd({
         materialUuid={materialUuid}
         onAdded={(addType, item) => {
           // Update via onSelect to reuse existing logic
-          onSelect({ uuid: item.uuid, name: item.name, normalizedName: item.normalizedName, alias: item.aliases });
+          onSelect({ type: quickAddType, uuid: item.uuid, name: item.name, normalizedName: item.normalizedName, alias: item.aliases });
           onQuickAdded?.(item);
         }}
       />
