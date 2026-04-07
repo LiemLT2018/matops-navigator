@@ -55,6 +55,7 @@ export async function getParseRules(type: 'bom_import' | 'purchase_request_impor
     { field: 'specification', pattern: '[ØøΦφ]\\s*\\d+(?:\\.\\d+)?\\s*(?:[xX×]\\s*\\d+(?:\\.\\d+)?)?\\s*(?:mm)?', priority: 2, flags: 'i' },
     { field: 'specification', pattern: '\\d+(?:\\.\\d+)?\\s*(?:mm|cm|m)\\s*[xX×]\\s*\\d+(?:\\.\\d+)?\\s*(?:mm|cm|m)?', priority: 3, flags: 'i' },
     { field: 'quantity_unit', pattern: '(\\d+(?:[.,]\\d+)?)\\s*(cái|chiếc|tấm|cây|thanh|kg|kilogram|bộ|mét|hộp|cuộn|lít|chai|thùng|tấn|gam|ống|pcs|set|miếng|đôi|cặp|m2|m3|cuon|tam|cai|chiec|cay|bo|met|hop|lit|ong|thung|tan|gam)', priority: 4, flags: 'i' },
+    { field: 'quantity_unit', pattern: '(\\d+(?:[.,]\\d+)?)\\s+([a-zA-ZÀ-ỹ]+)', priority: 5, flags: 'i' },
   ];
 }
 
