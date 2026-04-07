@@ -1,4 +1,4 @@
-// Excel Import Parser - Regex + Dictionary matching engine
+,// Excel Import Parser - Regex + Dictionary matching engine
 import * as XLSX from 'xlsx';
 
 // ── Types ──
@@ -64,7 +64,7 @@ export async function getImportDictionary(): Promise<ImportDictionary> {
   await new Promise(r => setTimeout(r, 50));
   return {
     materials: [
-      { uuid: 'mat-011', name: 'PHÍP NGỌC', normalizedName: 'phip ngoc', aliases: ['phip', 'ngoc'] },
+      { uuid: 'mat-011', name: 'PHÍP NGỌC', normalizedName: 'phip ngoc', aliases: ['phip ngac', 'phim ngoc'] },
       { uuid: 'mat-012', name: 'RICOCEL NHẬT', normalizedName: 'ricocel nhat', aliases: ['ricocel jp', 'ricocel japan', 'ricocel nhat ban'] },
       { uuid: 'mat-013', name: 'BAKELIT ĐEN ESD', normalizedName: 'bakelit den esd', aliases: ['bakelit esd', 'bakelite esd', 'bakelit den esd'] },
       { uuid: 'mat-014', name: 'FR4 ĐEN ESD', normalizedName: 'fr4 den esd', aliases: ['fr4 esd', 'fr4 den'] },
