@@ -16,6 +16,7 @@ import type { DatePresetKey } from '@/types/api';
 import { toast } from 'sonner';
 import { SuggestInputText } from '@/components/SuggestInputText';
 import { SuggestInputWithQuickAdd } from '@/components/SuggestInputWithQuickAdd';
+import type { SuggestData } from '@/api/suggestApi';
 import { ExcelImportPreview } from '@/components/ExcelImportPreview';
 import type { ParsedRow } from '@/utils/excelParser';
 

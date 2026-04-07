@@ -18,6 +18,7 @@ import { Plus, Search, Upload, Download, Edit, Copy, Trash2, X, Save, ChevronDow
 import { DatePresetSelect } from '@/components/DatePresetSelect';
 import { SuggestInputText } from '@/components/SuggestInputText';
 import { SuggestInputWithQuickAdd } from '@/components/SuggestInputWithQuickAdd';
+import type { SuggestData } from '@/api/suggestApi';
 import type { DatePresetKey } from '@/types/api';
 import { toast } from 'sonner';
 import { ExcelImportPreview } from '@/components/ExcelImportPreview';
