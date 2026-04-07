@@ -15,7 +15,7 @@ import { Plus, Search, ChevronDown, ChevronRight, Upload, LayoutGrid, List, Edit
 import type { DatePresetKey } from '@/types/api';
 import { toast } from 'sonner';
 import { SuggestInputText } from '@/components/SuggestInputText';
-import type { SuggestData } from '@/api/suggestApi';
+import { SuggestInputWithQuickAdd } from '@/components/SuggestInputWithQuickAdd';
 import { ExcelImportPreview } from '@/components/ExcelImportPreview';
 import type { ParsedRow } from '@/utils/excelParser';
 
