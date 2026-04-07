@@ -377,6 +377,9 @@ export function parseRow(
           }
         }
       }
+    } else {
+      // No exact match — still populate materialName with remaining text (Partial)
+      row.materialName = remaining;
     }
 
     // Try manufacturer match on remaining
@@ -386,6 +389,12 @@ export function parseRow(
       if (mfrMatch) {
         row.manufacturer = mfrMatch.item.name;
         row.manufacturerUuid = mfrMatch.item.uuid;
+      } else if (!row.materialUuid) {
+        // If material wasn't matched either, remaining could be manufacturer hint
+        // Don't overwrite if materialName already has the remaining text
+      } else {
+        // Material was matched, leftover is likely manufacturer
+        row.manufacturer = remaining;
       }
     }
   }
