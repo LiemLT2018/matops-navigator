@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../BackEnd/erd_matops_api"
+		}
+	],
+	"settings": {}
+}

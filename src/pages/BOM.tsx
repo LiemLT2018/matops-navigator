@@ -10,7 +10,74 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DatePresetSelect } from '@/components/DatePresetSelect';
 import { NumberDisplay } from '@/components/NumberDisplay';
-import { getBOMs, getBOMDetail, getBOMChildRefs, type BOMMaster, type BOMDetail, type BOMChildRef } from '@/api/mockApi';
+import {
+  productBomTemplateService,
+  productBomTemplateLineService,
+} from '@/api/services';
+import type { ProductBomTemplateLineListRow, ProductBomTemplateListRow } from '@/types/models';
+import { EdTypeFind } from '@/types/models';
+import type { BOMDetail, BOMChildRef } from '@/api/mockApi';
+
+/** Hàng hiển thị — tương thích bảng UI */
+interface BOMMaster {
+  id: string;
+  code: string;
+  product: string;
+  customer: string;
+  version: string;
+  status: string;
+  createdDate: string;
+  completedDate: string;
+  itemCount: number;
+  childBomCount: number;
+}
+
+const bomFilterToStatus: Record<string, number | undefined> = {
+  all: undefined,
+  draft: 0,
+  pending: 1,
+  in_progress: 2,
+  approved: 3,
+  completed: 3,
+};
+
+function bomStatusToBadge(s: number): string {
+  switch (s) {
+    case 0: return 'draft';
+    case 1: return 'pending';
+    case 2: return 'in_progress';
+    case 3: return 'approved';
+    default: return 'draft';
+  }
+}
+
+function mapTemplateToMaster(row: ProductBomTemplateListRow): BOMMaster {
+  return {
+    id: row.uuid,
+    code: row.code,
+    product: row.mdItem?.name ?? row.name,
+    customer: row.mdCompany?.name ?? '—',
+    version: row.revisionNo ? `${row.versionNo} r${row.revisionNo}` : row.versionNo,
+    status: bomStatusToBadge(row.status),
+    createdDate: row.createdAt ? new Date(row.createdAt).toLocaleDateString('vi-VN') : '—',
+    completedDate: row.status === 3 && row.updatedAt ? new Date(row.updatedAt).toLocaleDateString('vi-VN') : '',
+    itemCount: 0,
+    childBomCount: 0,
+  };
+}
+
+function mapLineToBOMDetail(line: ProductBomTemplateLineListRow): BOMDetail {
+  return {
+    id: line.uuid,
+    level: 1,
+    materialCode: line.mdItem?.code ?? line.code ?? '',
+    materialName: line.mdItem?.name ?? '',
+    specification: '',
+    unit: line.mdUom?.name ?? line.mdUom?.code ?? '',
+    quantity: Number(line.qtyPer),
+    note: line.remark ?? '',
+  };
+}
 import { Plus, Search, ChevronDown, ChevronRight, Upload, LayoutGrid, List, Edit, Copy, Trash2, Download, X, Save, FileSpreadsheet } from 'lucide-react';
 import type { DatePresetKey } from '@/types/api';
 import { toast } from 'sonner';
@@ -68,39 +135,84 @@ export default function BOMPage() {
 
 
   const loadData = useCallback(async () => {
-    const res = await getBOMs({ page, pageSize: 10, status: statusFilter !== 'all' ? statusFilter : undefined, keyword: search || undefined });
-    setData(res.data);
-    setTotalPages(res.pagination.totalPages);
-    setTotalCount(res.pagination.totalCount);
-  }, [page, statusFilter, search]);
+    try {
+      let user: { mdCompanyUuid?: string } = {};
+      try {
+        user = JSON.parse(localStorage.getItem('matops_user') || '{}');
+      } catch { /* ignore */ }
+      const statusNum = bomFilterToStatus[statusFilter];
+      const res = await productBomTemplateService.list({
+        pageIndex: page,
+        pageSize: 10,
+        isPaging: 1,
+        typeFind: EdTypeFind.DETAIL_LIST,
+        keyword: search || undefined,
+        status: statusNum,
+        mdCompanyUuid: user.mdCompanyUuid,
+      });
+      setData(res.items.map(mapTemplateToMaster));
+      setTotalPages(res.pagination.totalPage);
+      setTotalCount(res.pagination.totalCount);
+    } catch {
+      setData([]);
+      toast.error(t('errors.system'));
+    }
+  }, [page, statusFilter, search, t]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleExpand = async (id: string) => {
     if (expandedId === id) { setExpandedId(null); return; }
     if (!bomDetails[id]) {
-      const [detRes, childRes] = await Promise.all([getBOMDetail(id), getBOMChildRefs(id)]);
-      setBomDetails(prev => ({ ...prev, [id]: detRes.data }));
-      setBomChildRefs(prev => ({ ...prev, [id]: childRes.data }));
+      try {
+        const lineRes = await productBomTemplateLineService.list({
+          mdProductBomTemplateUuid: id,
+          isPaging: 0,
+          pageSize: 500,
+          typeFind: EdTypeFind.LIST,
+        });
+        setBomDetails(prev => ({ ...prev, [id]: lineRes.items.map(mapLineToBOMDetail) }));
+        setBomChildRefs(prev => ({ ...prev, [id]: [] as BOMChildRef[] }));
+      } catch {
+        toast.error(t('errors.system'));
+      }
     }
     setExpandedId(id);
   };
 
   const handleMasterClick = async (row: BOMMaster) => {
     if (viewMode === 'master') {
-      // Load detail and show in form for editing
-      const [detRes, childRes] = await Promise.all([getBOMDetail(row.id), getBOMChildRefs(row.id)]);
-      setEditingBOM(row);
-      setFormProduct(row.product);
-      setFormCustomer(row.customer);
-      setFormVersion(row.version);
-      setFormChildBOMs(childRes.data.length > 0
-        ? childRes.data.map(c => ({ _key: crypto.randomUUID(), bomCode: c.bomCode, bomName: c.bomName, quantity: String(c.quantity), unit: c.unit, note: c.note }))
-        : [emptyChildBOM()]);
-      setFormMaterials(detRes.data.length > 0
-        ? detRes.data.map(d => ({ _key: crypto.randomUUID(), materialCode: d.materialCode, materialName: d.materialName, specification: d.specification, unit: d.unit, quantity: String(d.quantity), manufacturer: '', note: d.note }))
-        : [emptyMaterial()]);
-      setShowForm(true);
+      try {
+        const [detail, lineRes] = await Promise.all([
+          productBomTemplateService.get(row.id),
+          productBomTemplateLineService.list({
+            mdProductBomTemplateUuid: row.id,
+            isPaging: 0,
+            pageSize: 500,
+            typeFind: EdTypeFind.LIST,
+          }),
+        ]);
+        setEditingBOM(row);
+        setFormProduct(detail.mdItem?.name ?? detail.name);
+        setFormCustomer(detail.mdCompany?.name ?? '');
+        setFormVersion(detail.versionNo);
+        setFormChildBOMs([emptyChildBOM()]);
+        setFormMaterials(lineRes.items.length > 0
+          ? lineRes.items.map(d => ({
+              _key: crypto.randomUUID(),
+              materialCode: d.mdItem?.code ?? d.code ?? '',
+              materialName: d.mdItem?.name ?? '',
+              specification: '',
+              unit: d.mdUom?.name ?? d.mdUom?.code ?? '',
+              quantity: String(d.qtyPer),
+              manufacturer: '',
+              note: d.remark ?? '',
+            }))
+          : [emptyMaterial()]);
+        setShowForm(true);
+      } catch {
+        toast.error(t('errors.system'));
+      }
     }
   };
 

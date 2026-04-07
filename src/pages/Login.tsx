@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { authService } from "@/api/services";
+import { MatOpsApiError } from "@/lib/apiClient";
 import { encryptPasswordRSA } from "@/utils/rsa";
 
 export default function LoginPage() {
@@ -33,8 +34,12 @@ export default function LoginPage() {
       localStorage.setItem("matops_user", JSON.stringify(res.user));
       toast.success(t("login.success"));
       navigate("/", { replace: true });
-    } catch {
-      // Error toast handled by apiClient interceptor
+    } catch (e) {
+      if (e instanceof MatOpsApiError && e.errorMessage) {
+        toast.error(e.errorMessage);
+      } else if (e instanceof Error && e.message !== "Unauthorized") {
+        toast.error(t("errors.system"));
+      }
     } finally {
       setLoading(false);
     }

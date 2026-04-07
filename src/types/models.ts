@@ -380,6 +380,50 @@ export interface StocktakeAdjustmentResult {
 }
 
 // ============================================================
+// ProductBomTemplate (BOM sản phẩm — khớp DTO backend)
+// ============================================================
+
+export interface ProductBomTemplateListRow {
+  uuid: string;
+  code: string;
+  name: string;
+  versionNo: string;
+  revisionNo: number;
+  status: number;
+  remark: string | null;
+  mdItem: { code: string; name: string } | null;
+  mdCompany: { code: string; name: string } | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ProductBomTemplateLineListRow {
+  uuid: string;
+  mdProductBomTemplateUuid: string;
+  mdItemUuid: string;
+  mdUomUuid: string;
+  lineNo: number;
+  qtyPer: number;
+  lossRate: number;
+  code: string | null;
+  remark: string | null;
+  mdItem: { code: string; name: string } | null;
+  mdUom: { code: string; name: string } | null;
+}
+
+export interface ProductBomTemplateListQuery extends ListQuery {
+  mdCompanyUuid?: string;
+  mdItemUuid?: string;
+  versionNo?: string;
+  revisionNo?: number;
+}
+
+export interface ProductBomTemplateLineListQuery extends ListQuery {
+  mdProductBomTemplateUuid?: string;
+  mdItemUuid?: string;
+}
+
+// ============================================================
 // DocumentNumberRule
 // ============================================================
 

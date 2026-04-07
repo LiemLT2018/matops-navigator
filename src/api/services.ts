@@ -5,11 +5,13 @@
  * Response envelope: { errorCode, errorMessage, data: { data, items, pagination } }
  */
 
-import { apiClient } from './apiClient';
-import type { BaseResponse } from '@/types/api';
-import type {
-  ApiListData, ListQuery, EdTypeFind,
-  CompanyDetail, CompanyCreateBody,
+import { apiClient } from '@/lib/apiClient';
+import {
+  EdTypeFind,
+  type ApiListData,
+  type ListQuery,
+  type CompanyDetail,
+  type CompanyCreateBody,
   BusinessPartnerDetail, BusinessPartnerCreateBody,
   PlantDetail, PlantCreateBody,
   WarehouseDetail, WarehouseCreateBody, WarehouseListQuery,
@@ -23,6 +25,8 @@ import type {
   InventoryBalanceItem, InventoryBalanceQuery,
   StocktakeAdjustmentBody, StocktakeAdjustmentResult,
   DocumentNumberRuleDetail, DocumentNumberRuleCreateBody, DocumentNumberRuleListQuery,
+  ProductBomTemplateListRow, ProductBomTemplateLineListRow,
+  ProductBomTemplateListQuery, ProductBomTemplateLineListQuery,
 } from '@/types/models';
 
 // ============================================================
@@ -37,15 +41,32 @@ function q(params: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
+/** ASP.NET bind `List<short> Statuses` — lặp `statuses=0&statuses=1` */
+function serializePageParams(params: Record<string, unknown>): string {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === null || v === "") continue;
+    if (Array.isArray(v)) {
+      for (const item of v) {
+        sp.append(k, String(item));
+      }
+    } else {
+      sp.append(k, String(v));
+    }
+  }
+  return sp.toString();
+}
+
 // Default list query values
 function listParams(query?: ListQuery, extra?: Record<string, unknown>) {
+  const status = query?.status;
   return q({
     typeFind: query?.typeFind ?? 1,
     isPaging: query?.isPaging ?? 1,
     pageIndex: query?.pageIndex ?? 1,
     pageSize: query?.pageSize ?? 20,
     keyword: query?.keyword,
-    status: query?.status,
+    ...(status !== undefined && status !== null ? { statuses: [status] } : {}),
     ...extra,
   });
 }
@@ -55,28 +76,31 @@ function listParams(query?: ListQuery, extra?: Record<string, unknown>) {
 // ============================================================
 
 async function getList<T>(url: string, query?: ListQuery, extra?: Record<string, unknown>): Promise<ApiListData<T>> {
-  const res = await apiClient.get(url, { params: listParams(query, extra) });
-  return (res.data as BaseResponse<ApiListData<T>>).data;
+  const res = await apiClient.get(url, {
+    params: listParams(query, extra),
+    paramsSerializer: { serialize: serializePageParams },
+  });
+  return res.data as ApiListData<T>;
 }
 
 async function getDetail<T>(url: string): Promise<T> {
   const res = await apiClient.get(url);
-  return (res.data as BaseResponse<T>).data;
+  return res.data as T;
 }
 
 async function create<T>(url: string, body: unknown): Promise<T> {
   const res = await apiClient.post(url, body);
-  return (res.data as BaseResponse<T>).data;
+  return res.data as T;
 }
 
 async function update<T>(url: string, body: unknown): Promise<T> {
   const res = await apiClient.put(url, body);
-  return (res.data as BaseResponse<T>).data;
+  return res.data as T;
 }
 
 async function remove(url: string): Promise<{ deleted: boolean; uuid: string; status: number }> {
   const res = await apiClient.delete(url);
-  return (res.data as BaseResponse<{ deleted: boolean; uuid: string; status: number }>).data;
+  return res.data as { deleted: boolean; uuid: string; status: number };
 }
 
 // ============================================================
@@ -127,11 +151,11 @@ export const purchaseRequestService = {
   delete: (uuid: string) => remove(`api/PurchaseRequest/${uuid}`),
   submit: async (uuid: string) => {
     const res = await apiClient.post(`api/PurchaseRequest/${uuid}/submit`);
-    return (res.data as BaseResponse).data;
+    return res.data;
   },
   createItemFromLine: async (lineUuid: string, body: CreateItemFromLineBody) => {
     const res = await apiClient.post(`api/PurchaseRequest/lines/${lineUuid}/create-item`, body);
-    return (res.data as BaseResponse<ItemDetail>).data;
+    return res.data as ItemDetail;
   },
 };
 
@@ -145,7 +169,7 @@ export const goodsReceiptService = {
   create: (body: GoodsReceiptCreateBody) => create<GoodsReceiptHeader>('api/GoodsReceipt', body),
   post: async (uuid: string) => {
     const res = await apiClient.post(`api/GoodsReceipt/${uuid}/post`);
-    return (res.data as BaseResponse).data;
+    return res.data;
   },
 };
 
@@ -160,8 +184,49 @@ export const inventoryBalanceService = {
   ),
   stocktakeAdjustment: async (body: StocktakeAdjustmentBody) => {
     const res = await apiClient.post('api/InventoryBalance/stocktake-adjustment', body);
-    return (res.data as BaseResponse<StocktakeAdjustmentResult>).data;
+    return res.data as StocktakeAdjustmentResult;
   },
+};
+
+/** Cộng dồn availableQty trên mọi dòng tồn kho của một vật tư (nhiều kho/bin). */
+export async function getTotalAvailableQtyForItem(mdItemUuid: string, mdCompanyUuid?: string): Promise<number> {
+  const res = await inventoryBalanceService.list({
+    mdItemUuid,
+    mdCompanyUuid,
+    pageIndex: 1,
+    pageSize: 500,
+    isPaging: 1,
+    typeFind: EdTypeFind.LIST,
+  });
+  return res.items.reduce((sum, row) => sum + Number(row.availableQty ?? 0), 0);
+}
+
+// ============================================================
+// ProductBomTemplate — api/ProductBomTemplate
+// ============================================================
+
+export const productBomTemplateService = {
+  list: (query?: ProductBomTemplateListQuery) =>
+    getList<ProductBomTemplateListRow>('api/ProductBomTemplate', query, {
+      mdCompanyUuid: query?.mdCompanyUuid,
+      mdItemUuid: query?.mdItemUuid,
+      versionNo: query?.versionNo,
+      revisionNo: query?.revisionNo,
+    }),
+  get: (uuid: string) => getDetail<ProductBomTemplateListRow>(`api/ProductBomTemplate/${uuid}`),
+};
+
+// ============================================================
+// ProductBomTemplateLine — api/ProductBomTemplateLine
+// ============================================================
+
+export const productBomTemplateLineService = {
+  list: (query?: ProductBomTemplateLineListQuery) =>
+    getList<ProductBomTemplateLineListRow>('api/ProductBomTemplateLine', query, {
+      mdProductBomTemplateUuid: query?.mdProductBomTemplateUuid,
+      mdItemUuid: query?.mdItemUuid,
+    }),
+  get: (uuid: string) => getDetail<ProductBomTemplateLineListRow>(`api/ProductBomTemplateLine/${uuid}`),
 };
 
 // ============================================================
@@ -253,8 +318,8 @@ export const documentNumberRuleService = {
 export const authService = {
   /** Fetch RSA public key for password encryption */
   getLoginPublicKey: async () => {
-    const res = await apiClient.get<BaseResponse>('api/Auth/login-public-key');
-    return res.data.data as {
+    const res = await apiClient.get('api/Auth/login-public-key');
+    return res.data as {
       publicKeyPem: string;
       encryption: string;
       hash: string;
@@ -263,11 +328,11 @@ export const authService = {
 
   /** Login with RSA-OAEP encrypted password */
   login: async (account: string, encryptedPassword: string) => {
-    const res = await apiClient.post<BaseResponse>('api/Auth/login', {
+    const res = await apiClient.post('api/Auth/login', {
       account,
       encryptedPassword,
     });
-    return res.data.data as {
+    return res.data as {
       accessToken: string;
       tokenType: string;
       expiresAtUtc: string;

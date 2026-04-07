@@ -9,8 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { getMaterialStockInfo, getBOMAllMaterials, type PRItem, type BOMFlatMaterial } from '@/api/mockApi';
-import { purchaseRequestService } from '@/api/services';
+import {
+  purchaseRequestService,
+  getTotalAvailableQtyForItem,
+  productBomTemplateLineService,
+} from '@/api/services';
+import type { ProductBomTemplateLineListRow } from '@/types/models';
+import { EdTypeFind } from '@/types/models';
 import type { PurchaseRequestHeader, PurchaseRequestLine } from '@/types/models';
 import { formatCurrency } from '@/utils/formatNumber';
 import { NumberDisplay } from '@/components/NumberDisplay';
@@ -163,23 +168,21 @@ export default function PurchaseRequestsPage() {
     if (field === 'materialName') {
       updated[index] = { ...updated[index], materialName: item.name, materialCode: item.uuid, materialUuid: item.uuid };
       setFormMaterials(updated);
-      // Fetch stock info
-      const res = await getMaterialStockInfo(item.uuid);
-      if (res.data) {
-        const info = res.data;
+      let user: { mdCompanyUuid?: string } = {};
+      try {
+        user = JSON.parse(localStorage.getItem('matops_user') || '{}');
+      } catch { /* ignore */ }
+      try {
+        const stockQty = await getTotalAvailableQtyForItem(item.uuid, user.mdCompanyUuid);
         const u = [...updated];
         u[index] = {
           ...u[index],
-          specification: info.specification || u[index].specification,
-          unit: info.unit || u[index].unit,
-          manufacturer: info.manufacturer || u[index].manufacturer,
-          stockQty: info.currentStock,
-          lastSupplier: info.lastSupplier,
-          lastPrice: info.lastPrice,
-          estimatedPrice: String(info.lastPrice || u[index].estimatedPrice),
+          stockQty,
+          lastSupplier: '',
+          lastPrice: null,
         };
         setFormMaterials(u);
-      }
+      } catch { /* tồn kho: bỏ qua nếu API lỗi */ }
     } else {
       updated[index] = { ...updated[index], [field]: item.name };
       setFormMaterials(updated);
@@ -253,32 +256,45 @@ export default function PurchaseRequestsPage() {
   // BOM suggest for importing materials
   const [bomSuggestValue, setBomSuggestValue] = useState('');
 
+  const lineToImportRow = (l: ProductBomTemplateLineListRow) => ({
+    materialCode: l.mdItem?.code ?? l.code ?? '',
+    materialName: l.mdItem?.name ?? '',
+    materialUuid: l.mdItemUuid,
+    specification: '',
+    unit: l.mdUom?.name ?? l.mdUom?.code ?? '',
+    quantity: Number(l.qtyPer),
+    manufacturer: '',
+    estimatedPrice: 0,
+  });
+
   const handleBomSuggestSelect = useCallback(async (item: SuggestData) => {
     setBomSuggestValue('');
-    // Find bomId from suggest item uuid - map bom codes to IDs
-    const bomCodeToId: Record<string, string> = {
-      'bom-001': '1', 'bom-002': '2', 'bom-003': '3', 'bom-004': '4',
-      'bom-005': '5', 'bom-006': '6', 'bom-007': '7', 'bom-008': '8',
-    };
-    const bomId = bomCodeToId[item.uuid] || '1';
+    let user: { mdCompanyUuid?: string } = {};
     try {
-      const res = await getBOMAllMaterials(bomId);
-      if (res.data.length === 0) { toast.info(t('common.noData')); return; }
+      user = JSON.parse(localStorage.getItem('matops_user') || '{}');
+    } catch { /* ignore */ }
+    try {
+      const lineRes = await productBomTemplateLineService.list({
+        mdProductBomTemplateUuid: item.uuid,
+        isPaging: 0,
+        pageSize: 500,
+        typeFind: EdTypeFind.LIST,
+      });
+      const flat = lineRes.items.map(lineToImportRow);
+      if (flat.length === 0) {
+        toast.info(t('common.noData'));
+        return;
+      }
 
       setFormMaterials(prev => {
-        // Remove empty rows
         let current = prev.filter(r => r.materialName || r.quantity);
-        
-        for (const bm of res.data) {
+        for (const bm of flat) {
           const existIdx = current.findIndex(r => r.materialCode === bm.materialCode && r.materialCode);
           if (existIdx >= 0) {
-            // Merge: add quantity
             const existing = current[existIdx];
             const newQty = Number(existing.quantity || 0) + bm.quantity;
-            const newEstPrice = bm.estimatedPrice * newQty;
-            current[existIdx] = { ...existing, quantity: String(newQty), estimatedPrice: String(newEstPrice) };
+            current[existIdx] = { ...existing, quantity: String(newQty) };
           } else {
-            const totalPrice = bm.estimatedPrice * bm.quantity;
             current.push({
               _key: crypto.randomUUID(),
               materialCode: bm.materialCode,
@@ -296,28 +312,26 @@ export default function PurchaseRequestsPage() {
             });
           }
         }
-
         if (current.length === 0) current.push(emptyMaterial());
         return current;
       });
 
-      // Fetch stock info for all materials
-      for (const bm of res.data) {
+      for (const bm of flat) {
         if (bm.materialUuid) {
-          const stockRes = await getMaterialStockInfo(bm.materialUuid);
-          if (stockRes.data) {
-            setFormMaterials(prev => prev.map(r => 
-              r.materialCode === bm.materialCode
-                ? { ...r, stockQty: stockRes.data!.currentStock, lastSupplier: stockRes.data!.lastSupplier, lastPrice: stockRes.data!.lastPrice }
+          try {
+            const qty = await getTotalAvailableQtyForItem(bm.materialUuid, user.mdCompanyUuid);
+            setFormMaterials(prev => prev.map(r =>
+              r.materialUuid === bm.materialUuid
+                ? { ...r, stockQty: qty }
                 : r
             ));
-          }
+          } catch { /* ignore */ }
         }
       }
 
-      toast.success(`Đã nhập ${res.data.length} vật tư từ BOM ${item.name}`);
+      toast.success(`Đã nhập ${flat.length} vật tư từ BOM ${item.name}`);
     } catch {
-      toast.error('Lỗi khi lấy dữ liệu BOM');
+      toast.error(t('errors.system'));
     }
   }, [t]);
 
