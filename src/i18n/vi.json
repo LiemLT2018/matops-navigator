@@ -153,6 +153,7 @@
     "importDesc": "Chọn file Excel chứa dữ liệu BOM để import",
     "clone": "Nhân bản",
     "addRow": "Thêm dòng",
+    "addToBOM": "Thêm vào BOM",
     "fillAllFields": "Vui lòng nhập đầy đủ thông tin dòng cuối trước khi thêm dòng mới",
     "saveBOM": "Lưu BOM",
     "productOrder": "Đơn sản xuất"

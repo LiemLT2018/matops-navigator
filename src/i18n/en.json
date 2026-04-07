@@ -153,6 +153,7 @@
     "importDesc": "Select an Excel file containing BOM data to import",
     "clone": "Clone",
     "addRow": "Add Row",
+    "addToBOM": "Add to BOM",
     "fillAllFields": "Please fill all fields in the last row before adding a new one",
     "saveBOM": "Save BOM",
     "productOrder": "Product Order"

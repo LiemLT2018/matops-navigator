@@ -15,7 +15,7 @@ import {
   productBomTemplateLineService,
 } from '@/api/services';
 import { getAuthUser } from '@/lib/authStorage';
-import type { ProductBomTemplateLineListRow, ProductBomTemplateListRow } from '@/types/models';
+import type { ProductBomTemplateLineListRow, ProductBomTemplateListRow, ProductBomTemplateCreateBody } from '@/types/models';
 import { EdTypeFind } from '@/types/models';
 import type { BOMDetail, BOMChildRef } from '@/api/mockApi';
 
@@ -72,7 +72,7 @@ function mapLineToBOMDetail(line: ProductBomTemplateLineListRow): BOMDetail {
     id: line.uuid,
     level: 1,
     materialCode: line.mdItem?.code ?? line.code ?? '',
-    materialName: line.mdItem?.name ?? '',
+    materialName: line.mdItem?.name ?? line.mdItemAlias?.name ?? '',
     specification: '',
     unit: line.mdUom?.name ?? line.mdUom?.code ?? '',
     quantity: Number(line.qtyPer),
@@ -94,13 +94,29 @@ interface FormChildBOM {
   _key: string; bomCode: string; bomName: string; quantity: string; unit: string; note: string;
 }
 interface FormMaterial {
-  _key: string; materialCode: string; materialName: string; specification: string; unit: string; quantity: string; manufacturer: string; note: string;
+  _key: string;
+  materialCode: string;
+  materialName: string;
+  specification: string;
+  unit: string;
+  mdUomUuid: string;
+  quantity: string;
+  manufacturer: string;
+  note: string;
 }
 
 const emptyChildBOM = (): FormChildBOM => ({ _key: crypto.randomUUID(), bomCode: '', bomName: '', quantity: '', unit: 'Bộ', note: '' });
-const emptyMaterial = (): FormMaterial => ({ _key: crypto.randomUUID(), materialCode: '', materialName: '', specification: '', unit: '', quantity: '', manufacturer: '', note: '' });
-
-const removeViDiacritics = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+const emptyMaterial = (): FormMaterial => ({
+  _key: crypto.randomUUID(),
+  materialCode: '',
+  materialName: '',
+  specification: '',
+  unit: '',
+  mdUomUuid: '',
+  quantity: '',
+  manufacturer: '',
+  note: '',
+});
 
 // Old SuggestInput removed — now using SuggestInputText component
 
@@ -128,7 +144,8 @@ export default function BOMPage() {
   const [formCustomer, setFormCustomer] = useState('');
   const [formVersion, setFormVersion] = useState('v1.0');
   const [formChildBOMs, setFormChildBOMs] = useState<FormChildBOM[]>([emptyChildBOM()]);
-  const [formMaterials, setFormMaterials] = useState<FormMaterial[]>([emptyMaterial()]);
+  const [committedMaterials, setCommittedMaterials] = useState<FormMaterial[]>([]);
+  const [draftMaterial, setDraftMaterial] = useState<FormMaterial>(() => emptyMaterial());
 
   // Excel import for materials
   const [matImportOpen, setMatImportOpen] = useState(false);
@@ -195,18 +212,18 @@ export default function BOMPage() {
         setFormCustomer(detail.mdCompany?.name ?? '');
         setFormVersion(detail.versionNo);
         setFormChildBOMs([emptyChildBOM()]);
-        setFormMaterials(lineRes.items.length > 0
-          ? lineRes.items.map(d => ({
-              _key: crypto.randomUUID(),
-              materialCode: d.mdItem?.code ?? d.code ?? '',
-              materialName: d.mdItem?.name ?? '',
-              specification: '',
-              unit: d.mdUom?.name ?? d.mdUom?.code ?? '',
-              quantity: String(d.qtyPer),
-              manufacturer: '',
-              note: d.remark ?? '',
-            }))
-          : [emptyMaterial()]);
+        setCommittedMaterials(lineRes.items.map(d => ({
+          _key: crypto.randomUUID(),
+          materialCode: d.mdItemUuid ?? '',
+          materialName: d.mdItem?.name ?? d.mdItemAlias?.name ?? '',
+          specification: '',
+          unit: d.mdUom?.name ?? d.mdUom?.code ?? '',
+          mdUomUuid: d.mdUomUuid ?? '',
+          quantity: String(d.qtyPer),
+          manufacturer: '',
+          note: d.remark ?? '',
+        })));
+        setDraftMaterial(emptyMaterial());
         setShowForm(true);
       } catch {
         toast.error(t('errors.system'));
@@ -218,37 +235,162 @@ export default function BOMPage() {
     setEditingBOM(null);
     setFormProduct(''); setFormCustomer(''); setFormVersion('v1.0');
     setFormChildBOMs([emptyChildBOM()]);
-    setFormMaterials([emptyMaterial()]);
+    setCommittedMaterials([]);
+    setDraftMaterial(emptyMaterial());
     setShowForm(true);
   };
 
   const handleCloseForm = () => { setShowForm(false); setEditingBOM(null); };
 
-  const handleSave = () => {
-    toast.success(editingBOM ? t('common.edit') + ' BOM ' + t('errors.success') : t('bom.createBOM') + ' ' + t('errors.success'));
-    setShowForm(false);
-    setEditingBOM(null);
+  const focusDraftMaterialName = () => {
+    requestAnimationFrame(() => {
+      document.getElementById('bom-draft-material-name')?.focus();
+    });
   };
 
-  // Material suggest handler using SuggestInputText callbacks
-  const handleMatFieldChange = (index: number, field: keyof FormMaterial, value: string) => {
-    const updated = [...formMaterials];
-    updated[index] = { ...updated[index], [field]: value };
-    // Clear materialCode when name changes manually
-    if (field === 'materialName') {
-      updated[index].materialCode = '';
+  const handleSave = async () => {
+    const user = getAuthUser();
+    if (!user?.mdCompanyUuid) {
+      toast.error(t('errors.system'));
+      return;
     }
-    setFormMaterials(updated);
+    const rows = committedMaterials.filter(r => r.materialName || r.quantity);
+    if (rows.length === 0) {
+      toast.warning(t('bom.fillAllFields'));
+      return;
+    }
+    for (const row of rows) {
+      if (!row.materialName?.trim() || !row.quantity || !row.mdUomUuid) {
+        toast.warning(t('bom.fillAllFields'));
+        return;
+      }
+    }
+    const body: ProductBomTemplateCreateBody = {
+      mdCompanyUuid: user.mdCompanyUuid,
+      name: formProduct.trim() || 'BOM',
+      versionNo: formVersion.trim() || 'v1',
+      revisionNo: 0,
+      status: 1,
+      lines: rows.map((row, i) => ({
+        mdItemUuid: row.materialCode || undefined,
+        name: row.materialCode ? undefined : row.materialName.trim(),
+        mdUomUuid: row.mdUomUuid,
+        qtyPer: Number(row.quantity),
+        lossRate: 0,
+        lineNo: i + 1,
+        remark: row.note || undefined,
+      })),
+    };
+    try {
+      if (editingBOM) {
+        toast.info(t('common.edit'));
+        setShowForm(false);
+        setEditingBOM(null);
+        await loadData();
+        return;
+      }
+      await productBomTemplateService.create(body);
+      toast.success(t('bom.createBOM') + ' ' + t('errors.success'));
+      setShowForm(false);
+      setEditingBOM(null);
+      await loadData();
+    } catch {
+      toast.error(t('errors.system'));
+    }
   };
 
-  const handleMatSuggestSelect = (index: number, field: keyof FormMaterial, item: SuggestData) => {
-    const updated = [...formMaterials];
+  const handleDraftMatFieldChange = (field: keyof FormMaterial, value: string) => {
+    setDraftMaterial(prev => {
+      const next = { ...prev, [field]: value };
+      if (field === 'materialName') {
+        next.materialCode = '';
+        next.mdUomUuid = '';
+      }
+      if (field === 'unit') {
+        next.mdUomUuid = '';
+      }
+      return next;
+    });
+  };
+
+  const handleCommittedMatFieldChange = (index: number, field: keyof FormMaterial, value: string) => {
+    setCommittedMaterials(prev => {
+      const u = [...prev];
+      u[index] = { ...u[index], [field]: value };
+      if (field === 'materialName') {
+        u[index].materialCode = '';
+        u[index].mdUomUuid = '';
+      }
+      if (field === 'unit') {
+        u[index].mdUomUuid = '';
+      }
+      return u;
+    });
+  };
+
+  const handleDraftMatSuggestSelect = (field: keyof FormMaterial, item: SuggestData) => {
     if (field === 'materialName') {
-      updated[index] = { ...updated[index], materialName: item.name, materialCode: item.uuid };
-    } else {
-      updated[index] = { ...updated[index], [field]: item.name };
+      setDraftMaterial(prev => ({
+        ...prev,
+        materialName: item.name,
+        materialCode: item.uuid,
+        specification: item.specification ?? prev.specification,
+        unit: item.unitName ?? prev.unit,
+        mdUomUuid: item.mdUomUuid ?? prev.mdUomUuid,
+        manufacturer: item.manufacturer ?? prev.manufacturer,
+      }));
+      return;
     }
-    setFormMaterials(updated);
+    if (field === 'unit') {
+      setDraftMaterial(prev => ({ ...prev, unit: item.name, mdUomUuid: item.uuid }));
+      return;
+    }
+    setDraftMaterial(prev => ({ ...prev, [field]: item.name }));
+  };
+
+  const handleCommittedMatSuggestSelect = (index: number, field: keyof FormMaterial, item: SuggestData) => {
+    if (field === 'materialName') {
+      setCommittedMaterials(prev => {
+        const u = [...prev];
+        u[index] = {
+          ...u[index],
+          materialName: item.name,
+          materialCode: item.uuid,
+          specification: item.specification ?? u[index].specification,
+          unit: item.unitName ?? u[index].unit,
+          mdUomUuid: item.mdUomUuid ?? u[index].mdUomUuid,
+          manufacturer: item.manufacturer ?? u[index].manufacturer,
+        };
+        return u;
+      });
+      return;
+    }
+    if (field === 'unit') {
+      setCommittedMaterials(prev => {
+        const u = [...prev];
+        u[index] = { ...u[index], unit: item.name, mdUomUuid: item.uuid };
+        return u;
+      });
+      return;
+    }
+    setCommittedMaterials(prev => {
+      const u = [...prev];
+      u[index] = { ...u[index], [field]: item.name };
+      return u;
+    });
+  };
+
+  const isMaterialRowComplete = (row: FormMaterial) =>
+    !!row.materialName?.trim() && !!row.quantity && !!row.mdUomUuid;
+
+  const addMaterialToBom = () => {
+    if (!isMaterialRowComplete(draftMaterial)) {
+      toast.warning(t('bom.fillAllFields'));
+      return;
+    }
+    setCommittedMaterials(prev => [...prev, { ...draftMaterial, _key: crypto.randomUUID() }]);
+    setDraftMaterial(emptyMaterial());
+    focusDraftMaterialName();
   };
 
   // BOM suggest handler
@@ -264,20 +406,12 @@ export default function BOMPage() {
     setFormChildBOMs(updated);
   };
 
-  // Add rows
   const isChildBOMRowComplete = (row: FormChildBOM) => row.bomName && row.quantity;
-  const isMaterialRowComplete = (row: FormMaterial) => row.materialName && row.quantity && row.unit;
 
   const addChildBOMRow = () => {
     const last = formChildBOMs[formChildBOMs.length - 1];
     if (last && !isChildBOMRowComplete(last)) { toast.warning(t('bom.fillAllFields')); return; }
     setFormChildBOMs([...formChildBOMs, emptyChildBOM()]);
-  };
-
-  const addMaterialRow = () => {
-    const last = formMaterials[formMaterials.length - 1];
-    if (last && !isMaterialRowComplete(last)) { toast.warning(t('bom.fillAllFields')); return; }
-    setFormMaterials([...formMaterials, emptyMaterial()]);
   };
 
   const handleChildBOMLastFieldTab = useCallback((index: number, e: React.KeyboardEvent) => {
@@ -298,28 +432,9 @@ export default function BOMPage() {
     }
   }, [formChildBOMs]);
 
-  const handleMaterialLastFieldTab = useCallback((index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Tab' && !e.shiftKey && index === formMaterials.length - 1) {
-      if (isMaterialRowComplete(formMaterials[index])) {
-        e.preventDefault();
-        setFormMaterials(prev => [...prev, emptyMaterial()]);
-        setTimeout(() => {
-          const table = document.querySelector('[data-bom-material-table]');
-          if (table) {
-            const rows = table.querySelectorAll('tbody tr');
-            const lastRow = rows[rows.length - 1];
-            const firstInput = lastRow?.querySelector('input:not([disabled])');
-            if (firstInput) (firstInput as HTMLElement).focus();
-          }
-        }, 50);
-      }
-    }
-  }, [formMaterials]);
-
-  // Handle Excel import for materials
   const handleMatExcelImport = useCallback((parsedRows: ParsedRow[]) => {
-    setFormMaterials(prev => {
-      let current = prev.filter(r => r.materialName || r.quantity);
+    setCommittedMaterials(prev => {
+      let current = [...prev];
       for (const pr of parsedRows) {
         const existIdx = current.findIndex(r => r.materialCode === pr.materialUuid && r.materialCode);
         if (existIdx >= 0) {
@@ -332,13 +447,13 @@ export default function BOMPage() {
             materialName: pr.materialName,
             specification: pr.specification,
             unit: pr.unit,
+            mdUomUuid: pr.unitUuid || '',
             quantity: String(pr.quantity),
             manufacturer: pr.manufacturer,
             note: '',
           });
         }
       }
-      if (current.length === 0) current.push(emptyMaterial());
       return current;
     });
   }, []);
@@ -482,14 +597,11 @@ export default function BOMPage() {
           </div>
         </div>
 
-        {/* Materials */}
+        {/* Materials: committed rows + draft row (sequential entry) */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold">{t('bom.materialList')}</h3>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setMatImportOpen(true)}><FileSpreadsheet className="h-3 w-3 mr-1" />{t('excelImport.importExcelMaterials')}</Button>
-              <Button variant="outline" size="sm" onClick={addMaterialRow}><Plus className="h-3 w-3 mr-1" />{t('bom.addRow')}</Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={() => setMatImportOpen(true)}><FileSpreadsheet className="h-3 w-3 mr-1" />{t('excelImport.importExcelMaterials')}</Button>
           </div>
           <div className="border border-border rounded-md overflow-hidden" data-bom-material-table>
             <Table>
@@ -506,49 +618,87 @@ export default function BOMPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {formMaterials.map((row, i) => (
+                {committedMaterials.map((row, i) => (
                   <TableRow key={row._key}>
                     <TableCell className="p-1"><Input value={row.materialCode} disabled className="h-8 text-sm font-mono bg-muted/50" /></TableCell>
                     <TableCell className="p-1">
                       <SuggestInputWithQuickAdd value={row.materialName} selectedUuid={row.materialCode}
-                        onChange={v => handleMatFieldChange(i, 'materialName', v)}
-                        onSelect={item => handleMatSuggestSelect(i, 'materialName', item)}
+                        onChange={v => handleCommittedMatFieldChange(i, 'materialName', v)}
+                        onSelect={item => handleCommittedMatSuggestSelect(i, 'materialName', item)}
                         type="material" quickAddType="material" placeholder={t('bom.materialName')} />
                     </TableCell>
                     <TableCell className="p-1">
                       <SuggestInputWithQuickAdd value={row.specification}
-                        onChange={v => handleMatFieldChange(i, 'specification', v)}
-                        onSelect={item => handleMatSuggestSelect(i, 'specification', item)}
+                        onChange={v => handleCommittedMatFieldChange(i, 'specification', v)}
+                        onSelect={item => handleCommittedMatSuggestSelect(i, 'specification', item)}
                         type="specification" quickAddType="specification"
                         materialUuid={row.materialCode}
                         placeholder={t('bom.specification')} />
                     </TableCell>
                     <TableCell className="p-1">
-                      <SuggestInputWithQuickAdd value={row.unit}
-                        onChange={v => handleMatFieldChange(i, 'unit', v)}
-                        onSelect={item => handleMatSuggestSelect(i, 'unit', item)}
+                      <SuggestInputWithQuickAdd value={row.unit} selectedUuid={row.mdUomUuid}
+                        onChange={v => handleCommittedMatFieldChange(i, 'unit', v)}
+                        onSelect={item => handleCommittedMatSuggestSelect(i, 'unit', item)}
                         type="unit" quickAddType="unit" placeholder={t('bom.unit')} />
                     </TableCell>
                     <TableCell className="p-1">
-                      <Input type="number" value={row.quantity} onChange={e => { const u = [...formMaterials]; u[i] = { ...u[i], quantity: e.target.value }; setFormMaterials(u); }} className="h-8 text-sm" />
+                      <Input type="number" value={row.quantity} onChange={e => handleCommittedMatFieldChange(i, 'quantity', e.target.value)} className="h-8 text-sm" />
                     </TableCell>
                     <TableCell className="p-1">
                       <SuggestInputWithQuickAdd value={row.manufacturer}
-                        onChange={v => handleMatFieldChange(i, 'manufacturer', v)}
-                        onSelect={item => handleMatSuggestSelect(i, 'manufacturer', item)}
+                        onChange={v => handleCommittedMatFieldChange(i, 'manufacturer', v)}
+                        onSelect={item => handleCommittedMatSuggestSelect(i, 'manufacturer', item)}
                         type="manufacturer" quickAddType="manufacturer" placeholder={t('bom.manufacturer')} />
                     </TableCell>
                     <TableCell className="p-1">
-                      <Input value={row.note} onChange={e => { const u = [...formMaterials]; u[i] = { ...u[i], note: e.target.value }; setFormMaterials(u); }} onKeyDown={e => handleMaterialLastFieldTab(i, e)} className="h-8 text-sm" />
+                      <Input value={row.note} onChange={e => handleCommittedMatFieldChange(i, 'note', e.target.value)} className="h-8 text-sm" />
                     </TableCell>
                     <TableCell className="p-1">
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setFormMaterials([...formMaterials, { ...row, _key: crypto.randomUUID() }])}><Copy className="h-3.5 w-3.5" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => formMaterials.length > 1 && setFormMaterials(formMaterials.filter((_, j) => j !== i))}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCommittedMaterials([...committedMaterials, { ...row, _key: crypto.randomUUID() }])}><Copy className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setCommittedMaterials(committedMaterials.filter((_, j) => j !== i))}><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
+                <TableRow className="bg-muted/20">
+                  <TableCell className="p-1"><Input value={draftMaterial.materialCode} disabled className="h-8 text-sm font-mono bg-muted/50" /></TableCell>
+                  <TableCell className="p-1">
+                    <SuggestInputWithQuickAdd id="bom-draft-material-name" value={draftMaterial.materialName} selectedUuid={draftMaterial.materialCode}
+                      onChange={v => handleDraftMatFieldChange('materialName', v)}
+                      onSelect={item => handleDraftMatSuggestSelect('materialName', item)}
+                      type="material" quickAddType="material" placeholder={t('bom.materialName')} />
+                  </TableCell>
+                  <TableCell className="p-1">
+                    <SuggestInputWithQuickAdd value={draftMaterial.specification}
+                      onChange={v => handleDraftMatFieldChange('specification', v)}
+                      onSelect={item => handleDraftMatSuggestSelect('specification', item)}
+                      type="specification" quickAddType="specification"
+                      materialUuid={draftMaterial.materialCode}
+                      placeholder={t('bom.specification')} />
+                  </TableCell>
+                  <TableCell className="p-1">
+                    <SuggestInputWithQuickAdd value={draftMaterial.unit} selectedUuid={draftMaterial.mdUomUuid}
+                      onChange={v => handleDraftMatFieldChange('unit', v)}
+                      onSelect={item => handleDraftMatSuggestSelect('unit', item)}
+                      type="unit" quickAddType="unit" placeholder={t('bom.unit')} />
+                  </TableCell>
+                  <TableCell className="p-1">
+                    <Input type="number" value={draftMaterial.quantity} onChange={e => handleDraftMatFieldChange('quantity', e.target.value)} className="h-8 text-sm" />
+                  </TableCell>
+                  <TableCell className="p-1">
+                    <SuggestInputWithQuickAdd value={draftMaterial.manufacturer}
+                      onChange={v => handleDraftMatFieldChange('manufacturer', v)}
+                      onSelect={item => handleDraftMatSuggestSelect('manufacturer', item)}
+                      type="manufacturer" quickAddType="manufacturer" placeholder={t('bom.manufacturer')} />
+                  </TableCell>
+                  <TableCell className="p-1">
+                    <Input value={draftMaterial.note} onChange={e => handleDraftMatFieldChange('note', e.target.value)} className="h-8 text-sm" />
+                  </TableCell>
+                  <TableCell className="p-1">
+                    <Button type="button" size="sm" className="h-8 whitespace-nowrap" onClick={addMaterialToBom}>{t('bom.addToBOM')}</Button>
+                  </TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           </div>

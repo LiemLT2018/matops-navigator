@@ -20,6 +20,7 @@ interface SuggestInputWithQuickAddProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  id?: string;
 }
 
 export function SuggestInputWithQuickAdd({
@@ -34,6 +35,7 @@ export function SuggestInputWithQuickAdd({
   placeholder,
   disabled,
   className,
+  id,
 }: SuggestInputWithQuickAddProps) {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
 
@@ -45,6 +47,7 @@ export function SuggestInputWithQuickAdd({
     <div className={cn('flex items-center gap-0.5', className)}>
       <div className="flex-1 min-w-0">
         <SuggestInputText
+          id={id}
           value={value}
           selectedUuid={selectedUuid}
           onChange={onChange}

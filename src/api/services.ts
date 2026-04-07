@@ -28,6 +28,7 @@ import {
   DocumentNumberRuleDetail, DocumentNumberRuleCreateBody, DocumentNumberRuleListQuery,
   ProductBomTemplateListRow, ProductBomTemplateLineListRow,
   ProductBomTemplateListQuery, ProductBomTemplateLineListQuery,
+  ProductBomTemplateCreateBody,
 } from '@/types/models';
 
 // ============================================================
@@ -227,6 +228,19 @@ export async function getTotalAvailableQtyForItem(mdItemUuid: string, mdCompanyU
 // ProductBomTemplate — api/ProductBomTemplate
 // ============================================================
 
+/** Khớp backend BomMaterialSuggestDto. */
+export interface BomMaterialSuggestItem {
+  source: string;
+  materialVariantId: string;
+  itemAliasId: string | null;
+  code: string;
+  name: string;
+  specification: string | null;
+  unitName: string | null;
+  mdUomUuid: string;
+  manufacturer: string | null;
+}
+
 export const productBomTemplateService = {
   list: (query?: ProductBomTemplateListQuery) =>
     getList<ProductBomTemplateListRow>('api/ProductBomTemplate', query, {
@@ -236,6 +250,12 @@ export const productBomTemplateService = {
       revisionNo: query?.revisionNo,
     }),
   get: (uuid: string) => getDetail<ProductBomTemplateListRow>(`api/ProductBomTemplate/${uuid}`),
+  create: (body: ProductBomTemplateCreateBody) =>
+    create<ProductBomTemplateListRow>('api/ProductBomTemplate', body),
+  materialSuggestions: (q: string, limit = 50, mdCompanyUuid?: string) =>
+    getDetail<BomMaterialSuggestItem[]>(
+      `api/ProductBomTemplate/material-suggestions?q=${encodeURIComponent(q)}&limit=${limit}${mdCompanyUuid ? `&mdCompanyUuid=${encodeURIComponent(mdCompanyUuid)}` : ''}`,
+    ),
 };
 
 // ============================================================

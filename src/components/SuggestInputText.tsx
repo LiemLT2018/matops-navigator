@@ -10,6 +10,7 @@ interface SuggestInputTextProps {
   onChange: (value: string) => void;
   onSelect: (item: SuggestData) => void;
   type: string;
+  id?: string;
   placeholder?: string;
   minChars?: number;
   debounceMs?: number;
@@ -33,6 +34,7 @@ export function SuggestInputText({
   onChange,
   onSelect,
   type,
+  id,
   placeholder,
   minChars = 2,
   debounceMs = 300,
@@ -210,6 +212,7 @@ export function SuggestInputText({
 
       <div className="relative">
         <Input
+          id={id}
           ref={inputRef}
           value={value}
           onChange={e => handleChange(e.target.value)}

@@ -1,4 +1,7 @@
-// Mock Suggest API for SuggestInputText component
+import { productBomTemplateService } from '@/api/services';
+import { getAuthUser } from '@/lib/authStorage';
+
+// Suggest API — vật tư BOM dùng backend; các loại khác vẫn mock.
 
 export interface SuggestData {
   type: string;
@@ -7,6 +10,13 @@ export interface SuggestData {
   normalizedName: string;
   alias: string[];
   rawText?: string;
+  /** Gợi ý từ API BOM (material). */
+  specification?: string;
+  mdUomUuid?: string;
+  unitName?: string;
+  manufacturer?: string | null;
+  itemAliasId?: string | null;
+  source?: string;
 }
 
 export interface SuggestResponse {
@@ -134,6 +144,29 @@ export async function suggestSearch(
   type: string,
   limit: number = 50
 ): Promise<SuggestResponse> {
+  if (type === 'material') {
+    try {
+      const user = getAuthUser();
+      const rows = await productBomTemplateService.materialSuggestions(q, limit, user?.mdCompanyUuid);
+      const items: SuggestData[] = rows.map(r => ({
+        type: 'material',
+        uuid: r.materialVariantId,
+        name: r.name,
+        normalizedName: removeViDiacritics(r.name),
+        alias: [],
+        specification: r.specification ?? undefined,
+        mdUomUuid: r.mdUomUuid,
+        unitName: r.unitName ?? undefined,
+        manufacturer: r.manufacturer,
+        itemAliasId: r.itemAliasId,
+        source: r.source,
+      }));
+      return { type, items, limit, hasMore: items.length >= limit };
+    } catch {
+      // fall through to mock
+    }
+  }
+
   await new Promise(r => setTimeout(r, 80 + Math.random() * 120));
 
   const data = MOCK_DATA[type] || [];

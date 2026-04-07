@@ -280,18 +280,20 @@ export enum EdItemAliasType {
 export interface ItemAliasDetail {
   id: number;
   uuid: string;
-  mdItemUuid: string;
+  mdItemUuid: string | null;
   name: string;
   normalizedText?: string | null;
   type: number;
+  status?: number;
   description?: string | null;
   createdAt?: string;
 }
 
 export interface ItemAliasCreateBody {
-  mdItemUuid: string;
+  mdItemUuid?: string | null;
   name: string;
   type: number;
+  status?: number;
   description?: string | null;
 }
 
@@ -458,7 +460,8 @@ export interface ProductBomTemplateListRow {
 export interface ProductBomTemplateLineListRow {
   uuid: string;
   mdProductBomTemplateUuid: string;
-  mdItemUuid: string;
+  mdItemUuid: string | null;
+  mdItemAliasUuid?: string | null;
   mdUomUuid: string;
   lineNo: number;
   qtyPer: number;
@@ -466,7 +469,34 @@ export interface ProductBomTemplateLineListRow {
   code: string | null;
   remark: string | null;
   mdItem: { code: string; name: string } | null;
+  mdItemAlias?: { uuid: string; name: string; status?: number } | null;
   mdUom: { code: string; name: string } | null;
+}
+
+/** POST api/ProductBomTemplate — dòng BOM (khớp CreateProductBomTemplateLineInput). */
+export interface ProductBomTemplateCreateLineBody {
+  mdItemUuid?: string | null;
+  mdItemAliasUuid?: string | null;
+  name?: string | null;
+  mdUomUuid: string;
+  lineNo?: number;
+  qtyPer: number;
+  lossRate?: number;
+  code?: string | null;
+  remark?: string | null;
+}
+
+export interface ProductBomTemplateCreateBody {
+  mdCompanyUuid: string;
+  mdBusinessPartnerUuid?: string | null;
+  mdItemUuid?: string | null;
+  code?: string | null;
+  name: string;
+  versionNo: string;
+  revisionNo?: number;
+  status?: number;
+  remark?: string | null;
+  lines?: ProductBomTemplateCreateLineBody[];
 }
 
 export interface ProductBomTemplateListQuery extends ListQuery {
