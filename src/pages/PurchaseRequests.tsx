@@ -17,7 +17,7 @@ import { NumberDisplay } from '@/components/NumberDisplay';
 import { Plus, Search, Upload, Download, Edit, Copy, Trash2, X, Save, ChevronDown, ChevronRight, FileSpreadsheet } from 'lucide-react';
 import { DatePresetSelect } from '@/components/DatePresetSelect';
 import { SuggestInputText } from '@/components/SuggestInputText';
-import type { SuggestData } from '@/api/suggestApi';
+import { SuggestInputWithQuickAdd } from '@/components/SuggestInputWithQuickAdd';
 import type { DatePresetKey } from '@/types/api';
 import { toast } from 'sonner';
 import { ExcelImportPreview } from '@/components/ExcelImportPreview';
