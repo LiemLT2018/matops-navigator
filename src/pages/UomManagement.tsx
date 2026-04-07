@@ -28,6 +28,15 @@ const UOM_SCOPES = [
 
 const INITIAL_FORM: UomCreateBody = { code: '', name: '', type: 0, decimalPlaces: 0, status: 1 };
 
+/** Bộ lọc phạm vi: NVL → dùng chung + NVL; SP → dùng chung + SP; chỉ dùng chung → [0]. */
+function typesFilterForScope(scope: string): number[] | undefined {
+  if (scope === 'all') return undefined;
+  if (scope === '0') return [0];
+  if (scope === '1') return [0, 1];
+  if (scope === '2') return [0, 2];
+  return undefined;
+}
+
 export default function UomManagementPage() {
   const { t } = useTranslation();
   const [data, setData] = useState<UomCatalog[]>([]);
@@ -49,13 +58,14 @@ export default function UomManagementPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      const scopeTypes = typesFilterForScope(filterScope);
       const res = await uomService.list({
         keyword: search || undefined,
         pageIndex: page,
         pageSize: 20,
         typeFind: EdTypeFind.LIST,
         ...(filterStatus !== 'all' ? { status: Number(filterStatus) } : {}),
-        ...(filterScope !== 'all' ? { types: [Number(filterScope)] } : {}),
+        ...(scopeTypes != null ? { types: scopeTypes } : {}),
       });
       setData(res.items);
       setTotalCount(res.pagination.totalCount);
