@@ -49,17 +49,16 @@ export function AppSidebar() {
     { title: t('nav.materialList'), url: '/material-list', icon: List },
     { title: t('nav.materialAliases'), url: '/material-aliases', icon: Tag },
     { title: t('nav.undefinedMaterials'), url: '/undefined-materials', icon: HelpCircle },
-    { title: t('nav.materialUnits'), url: '/material-units', icon: Ruler },
   ];
 
   const productItems = [
     { title: t('nav.finishedGoods'), url: '/finished-goods', icon: PackageOpen },
     { title: t('nav.productGroups'), url: '/product-groups', icon: Box },
     { title: t('nav.productList'), url: '/product-list', icon: List },
-    { title: t('nav.productUnits'), url: '/product-units', icon: Ruler },
   ];
 
   const operationItems = [
+    { title: t('nav.operationUom'), url: '/uom', icon: Ruler },
     { title: t('nav.production'), url: '/production', icon: Factory },
     { title: t('nav.qc'), url: '/qc', icon: ClipboardCheck },
   ];

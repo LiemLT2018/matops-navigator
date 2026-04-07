@@ -16,9 +16,10 @@ import {
   PlantDetail, PlantCreateBody,
   WarehouseDetail, WarehouseCreateBody, WarehouseListQuery,
   WarehouseBinDetail, WarehouseBinCreateBody, WarehouseBinListQuery,
-  UomCatalog, UomDetail, UomCreateBody,
+  UomCatalog, UomDetail, UomDetailWithUsage, UomCreateBody, UomListQuery,
   ItemCategoryCatalog, ItemCategoryDetail, ItemCategoryCreateBody,
   ItemDetail, ItemCreateBody, ItemListQuery,
+  ItemAliasDetail, ItemAliasCreateBody, ItemAliasListQuery,
   PurchaseRequestHeader, PurchaseRequestDetailData, PurchaseRequestCreateBody,
   CreateItemFromLineBody,
   GoodsReceiptHeader, GoodsReceiptCreateBody,
@@ -108,8 +109,13 @@ async function remove(url: string): Promise<{ deleted: boolean; uuid: string; st
 // ============================================================
 
 export const uomService = {
-  list: (query?: ListQuery) => getList<UomCatalog>('api/Uom', query),
-  get: (uuid: string) => getDetail<UomDetail>(`api/Uom/${uuid}`),
+  list: (query?: UomListQuery) =>
+    getList<UomCatalog>(
+      'api/Uom',
+      query,
+      query?.types?.length ? { types: query.types } : undefined,
+    ),
+  get: (uuid: string) => getDetail<UomDetailWithUsage>(`api/Uom/${uuid}`),
   create: (body: UomCreateBody) => create<UomDetail>('api/Uom', body),
   update: (uuid: string, body: UomCreateBody) => update<UomDetail>(`api/Uom/${uuid}`, body),
   delete: (uuid: string) => remove(`api/Uom/${uuid}`),
@@ -137,6 +143,22 @@ export const itemService = {
   create: (body: ItemCreateBody) => create<ItemDetail>('api/Item', body),
   update: (uuid: string, body: ItemCreateBody) => update<ItemDetail>(`api/Item/${uuid}`, body),
   delete: (uuid: string) => remove(`api/Item/${uuid}`),
+};
+
+// ============================================================
+// ItemAlias (bí danh vật tư) — api/ItemAlias
+// ============================================================
+
+export const itemAliasService = {
+  list: (query?: ItemAliasListQuery) =>
+    getList<ItemAliasDetail>('api/ItemAlias', query, {
+      mdItemUuid: query?.mdItemUuid,
+      ...(query?.types?.length ? { types: query.types } : {}),
+    }),
+  get: (uuid: string) => getDetail<ItemAliasDetail>(`api/ItemAlias/${uuid}`),
+  create: (body: ItemAliasCreateBody) => create<ItemAliasDetail>('api/ItemAlias', body),
+  update: (uuid: string, body: ItemAliasCreateBody) => update<ItemAliasDetail>(`api/ItemAlias/${uuid}`, body),
+  delete: (uuid: string) => remove(`api/ItemAlias/${uuid}`),
 };
 
 // ============================================================

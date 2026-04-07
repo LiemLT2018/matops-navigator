@@ -22,13 +22,12 @@
     "materialList": "Material List",
     "materialAliases": "Input Aliases",
     "undefinedMaterials": "Undefined",
-    "materialUnits": "Units of Measure",
     "productsMenu": "Products",
     "finishedGoods": "Finished Goods",
     "productGroups": "Product Groups",
     "productList": "Product List",
-    "productUnits": "Units of Measure",
     "operations": "Operations",
+    "operationUom": "Units of measure",
     "production": "Production",
     "qc": "Quality Control",
     "settings": "Settings"
@@ -256,7 +255,18 @@
       "alias": "Alias",
       "materialCode": "Material Code",
       "materialName": "Original Name",
-      "source": "Source"
+      "source": "Source",
+      "type": "Type",
+      "typeAll": "All types",
+      "typeCommon": "Common name",
+      "typeSupplier": "Supplier name",
+      "typeKeyword": "Search keyword",
+      "description": "Description",
+      "createdAt": "Created",
+      "createTitle": "Add alias",
+      "editTitle": "Edit alias",
+      "selectMaterial": "Select item",
+      "save": "Save"
     },
     "undefined": {
       "title": "Undefined Materials",
@@ -382,14 +392,24 @@
     "importExcelMaterials": "Import Excel"
   },
   "uom": {
-    "type": "Unit Type",
-    "decimalPlaces": "Decimal Places",
-    "types": {
-      "qty": "Quantity",
-      "length": "Length",
-      "area": "Area",
-      "volume": "Volume",
-      "weight": "Weight"
+    "pageTitle": "Units of measure",
+    "code": "UoM code",
+    "name": "UoM name",
+    "symbol": "Symbol",
+    "description": "Description",
+    "type": "Unit scope",
+    "decimalPlaces": "Decimal places",
+    "detailTitle": "Unit of measure detail",
+    "general": "General information",
+    "itemsUsing": "Items using this UoM",
+    "categoriesUsing": "Item categories using this UoM",
+    "viewDetail": "View detail",
+    "statusActive": "Active",
+    "statusInactive": "Inactive",
+    "scopes": {
+      "common": "Shared",
+      "material": "Raw / material",
+      "product": "Product"
     }
   },
   "login": {

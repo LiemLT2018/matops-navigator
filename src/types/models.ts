@@ -175,18 +175,46 @@ export interface WarehouseBinListQuery extends ListQuery {
 // UOM (Unit of Measure)
 // ============================================================
 
-export interface UomCatalog {
-  id: number; uuid: string; status: number;
-  code: string; name: string;
+export interface UomListQuery extends ListQuery {
+  /** Phạm vi ĐVT (0/1/2); gửi lặp `types=` theo backend. */
+  types?: number[];
 }
+
+export interface UomCatalog {
+  id: number;
+  uuid: string;
+  status: number;
+  code: string;
+  name: string;
+  symbol?: string;
+  /** 0 Dùng chung / 1 NVL / 2 SP (API trả số). */
+  type: number;
+  decimalPlaces: number;
+  description?: string;
+}
+
+export interface UomUsageRow {
+  uuid: string;
+  code: string;
+  name: string;
+}
+
 export interface UomDetail extends UomCatalog {
-  type?: number; decimalPlaces: number;
-  createdAt: string; updatedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UomDetailWithUsage extends UomDetail {
+  itemsUsingUom: UomUsageRow[];
+  itemCategoriesUsingUom: UomUsageRow[];
 }
 
 export interface UomCreateBody {
-  code: string; name: string;
-  type?: number; decimalPlaces?: number; status?: number;
+  code: string;
+  name: string;
+  type?: number;
+  decimalPlaces?: number;
+  status?: number;
 }
 
 // ============================================================
@@ -240,6 +268,36 @@ export interface ItemCreateBody {
 
 export interface ItemListQuery extends ListQuery {
   mdCompanyUuid?: string;
+}
+
+/** Khớp `MdItemAlias.Type` — COMMON_NAME, SUPPLIER_NAME, SEARCH_KEYWORD */
+export enum EdItemAliasType {
+  COMMON_NAME = 0,
+  SUPPLIER_NAME = 1,
+  SEARCH_KEYWORD = 2,
+}
+
+export interface ItemAliasDetail {
+  id: number;
+  uuid: string;
+  mdItemUuid: string;
+  name: string;
+  normalizedText?: string | null;
+  type: number;
+  description?: string | null;
+  createdAt?: string;
+}
+
+export interface ItemAliasCreateBody {
+  mdItemUuid: string;
+  name: string;
+  type: number;
+  description?: string | null;
+}
+
+export interface ItemAliasListQuery extends ListQuery {
+  mdItemUuid?: string;
+  types?: number[];
 }
 
 // ============================================================

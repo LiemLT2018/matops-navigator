@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/AppLayout";
@@ -21,10 +21,9 @@ import MaterialGroupsPage from "@/pages/MaterialGroups";
 import MaterialListPage from "@/pages/MaterialList";
 import MaterialAliasesPage from "@/pages/MaterialAliases";
 import UndefinedMaterialsPage from "@/pages/UndefinedMaterials";
-import MaterialUnitsPage from "@/pages/MaterialUnits";
 import ProductGroupsPage from "@/pages/ProductGroups";
 import ProductListPage from "@/pages/ProductList";
-import ProductUnitsPage from "@/pages/ProductUnits";
+import UomManagementPage from "@/pages/UomManagement";
 import LoginPage from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 
@@ -54,10 +53,11 @@ const App = () => (
             <Route path="/material-list" element={<MaterialListPage />} />
             <Route path="/material-aliases" element={<MaterialAliasesPage />} />
             <Route path="/undefined-materials" element={<UndefinedMaterialsPage />} />
-            <Route path="/material-units" element={<MaterialUnitsPage />} />
+            <Route path="/uom" element={<UomManagementPage />} />
+            <Route path="/material-units" element={<Navigate to="/uom" replace />} />
             <Route path="/product-groups" element={<ProductGroupsPage />} />
             <Route path="/product-list" element={<ProductListPage />} />
-            <Route path="/product-units" element={<ProductUnitsPage />} />
+            <Route path="/product-units" element={<Navigate to="/uom" replace />} />
             <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Route>

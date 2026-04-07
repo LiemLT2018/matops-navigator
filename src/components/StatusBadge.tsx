@@ -6,6 +6,8 @@ interface StatusBadgeProps {
 }
 
 const statusConfig: Record<string, string> = {
+  active: 'bg-success/15 text-success border-success/30',
+  inactive: 'bg-muted text-muted-foreground border-border',
   pending: 'bg-warning/15 text-warning border-warning/30',
   in_progress: 'bg-info/15 text-info border-info/30',
   completed: 'bg-success/15 text-success border-success/30',
