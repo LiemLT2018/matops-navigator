@@ -377,6 +377,9 @@ export function parseRow(
           }
         }
       }
+    } else {
+      // No exact match — still populate materialName with remaining text (Partial)
+      row.materialName = remaining;
     }
 
     // Try manufacturer match on remaining
