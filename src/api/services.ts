@@ -77,12 +77,37 @@ function listParams(query?: ListQuery, extra?: Record<string, unknown>) {
 // Generic list/detail/create/update/delete
 // ============================================================
 
+function asRecord(v: unknown): Record<string, unknown> {
+  return v !== null && typeof v === 'object' ? (v as Record<string, unknown>) : {};
+}
+
+/** Chuẩn hóa payload danh sách (camelCase hoặc PascalCase) — tránh `items` undefined → lỗi khi xem chi tiết BOM. */
+function normalizeApiListData<T>(raw: unknown): ApiListData<T> {
+  const p = asRecord(raw);
+  const itemsRaw = p.items ?? p.Items;
+  const items = Array.isArray(itemsRaw) ? (itemsRaw as T[]) : [];
+  const pag = asRecord(p.pagination ?? p.Pagination);
+  const totalCount = Number(pag.totalCount ?? pag.TotalCount ?? 0);
+  const totalPage = Number(
+    pag.totalPage ?? pag.TotalPage ?? pag.totalPages ?? pag.TotalPages ?? 1,
+  );
+  const meta = asRecord(p.data ?? p.Data);
+  return {
+    data: {
+      typeFind: Number(meta.typeFind ?? meta.TypeFind ?? 0),
+      isPaging: Number(meta.isPaging ?? meta.IsPaging ?? 0),
+    },
+    items,
+    pagination: { totalCount, totalPage },
+  };
+}
+
 async function getList<T>(url: string, query?: ListQuery, extra?: Record<string, unknown>): Promise<ApiListData<T>> {
   const res = await apiClient.get(url, {
     params: listParams(query, extra),
     paramsSerializer: { serialize: serializePageParams },
   });
-  return res.data as ApiListData<T>;
+  return normalizeApiListData<T>(res.data);
 }
 
 async function getDetail<T>(url: string): Promise<T> {

@@ -67,7 +67,58 @@ function mapTemplateToMaster(row: ProductBomTemplateListRow): BOMMaster {
   };
 }
 
+/** Chuẩn hóa dòng BOM từ API (hỗ trợ PascalCase nếu server / proxy không dùng camelCase). */
+function normalizeBomLineFromApi(raw: unknown): ProductBomTemplateLineListRow {
+  if (raw === null || typeof raw !== 'object') {
+    return {
+      uuid: '',
+      mdProductBomTemplateUuid: '',
+      mdItemUuid: null,
+      mdUomUuid: '',
+      lineNo: 0,
+      qtyPer: 0,
+      lossRate: 0,
+      code: null,
+      remark: null,
+      mdItem: null,
+      mdUom: null,
+    };
+  }
+  const r = raw as Record<string, unknown>;
+  const normRef = (i: unknown): { code: string; name: string } | null => {
+    if (!i || typeof i !== 'object') return null;
+    const o = i as Record<string, unknown>;
+    return { code: String(o.code ?? o.Code ?? ''), name: String(o.name ?? o.Name ?? '') };
+  };
+  const normAlias = (i: unknown): { uuid: string; name: string; status?: number } | null => {
+    if (!i || typeof i !== 'object') return null;
+    const o = i as Record<string, unknown>;
+    return {
+      uuid: String(o.uuid ?? o.Uuid ?? ''),
+      name: String(o.name ?? o.Name ?? ''),
+      status: o.status !== undefined ? Number(o.status) : o.Status !== undefined ? Number(o.Status) : undefined,
+    };
+  };
+  const mUuid = r.mdItemUuid ?? r.MdItemUuid;
+  return {
+    uuid: String(r.uuid ?? r.Uuid ?? ''),
+    mdProductBomTemplateUuid: String(r.mdProductBomTemplateUuid ?? r.MdProductBomTemplateUuid ?? ''),
+    mdItemUuid: mUuid === null || mUuid === undefined ? null : String(mUuid),
+    mdItemAliasUuid: (r.mdItemAliasUuid ?? r.MdItemAliasUuid) as string | null | undefined,
+    mdUomUuid: String(r.mdUomUuid ?? r.MdUomUuid ?? ''),
+    lineNo: Number(r.lineNo ?? r.LineNo ?? 0),
+    qtyPer: Number(r.qtyPer ?? r.QtyPer ?? 0),
+    lossRate: Number(r.lossRate ?? r.LossRate ?? 0),
+    code: (r.code ?? r.Code ?? null) as string | null,
+    remark: (r.remark ?? r.Remark ?? null) as string | null,
+    mdItem: normRef(r.mdItem ?? r.MdItem),
+    mdItemAlias: normAlias(r.mdItemAlias ?? r.MdItemAlias),
+    mdUom: normRef(r.mdUom ?? r.MdUom),
+  };
+}
+
 function mapLineToBOMDetail(line: ProductBomTemplateLineListRow): BOMDetail {
+  const q = Number(line.qtyPer);
   return {
     id: line.uuid,
     level: 1,
@@ -75,9 +126,21 @@ function mapLineToBOMDetail(line: ProductBomTemplateLineListRow): BOMDetail {
     materialName: line.mdItem?.name ?? line.mdItemAlias?.name ?? '',
     specification: '',
     unit: line.mdUom?.name ?? line.mdUom?.code ?? '',
-    quantity: Number(line.qtyPer),
+    quantity: Number.isFinite(q) ? q : 0,
     note: line.remark ?? '',
   };
+}
+
+/** GET template chi tiết: hỗ trợ PascalCase trên header (mdItem / mdCompany). */
+function templateHeaderFields(raw: ProductBomTemplateListRow): { product: string; customer: string; version: string } {
+  const r = raw as unknown as Record<string, unknown>;
+  const mdItem = (r.mdItem ?? r.MdItem) as Record<string, unknown> | undefined;
+  const mdCompany = (r.mdCompany ?? r.MdCompany) as Record<string, unknown> | undefined;
+  const fromItem = mdItem ? String(mdItem.name ?? mdItem.Name ?? '') : '';
+  const name = String(r.name ?? r.Name ?? raw.name ?? '');
+  const customer = mdCompany ? String(mdCompany.name ?? mdCompany.Name ?? '') : '';
+  const version = String(r.versionNo ?? r.VersionNo ?? raw.versionNo ?? '');
+  return { product: fromItem || name, customer, version };
 }
 import { Plus, Search, ChevronDown, ChevronRight, Upload, LayoutGrid, List, Edit, Copy, Trash2, Download, X, Save, FileSpreadsheet } from 'lucide-react';
 import type { DatePresetKey } from '@/types/api';
@@ -186,7 +249,10 @@ export default function BOMPage() {
           pageSize: 500,
           typeFind: EdTypeFind.LIST,
         });
-        setBomDetails(prev => ({ ...prev, [id]: lineRes.items.map(mapLineToBOMDetail) }));
+        setBomDetails(prev => ({
+          ...prev,
+          [id]: lineRes.items.map(d => mapLineToBOMDetail(normalizeBomLineFromApi(d))),
+        }));
         setBomChildRefs(prev => ({ ...prev, [id]: [] as BOMChildRef[] }));
       } catch {
         toast.error(t('errors.system'));
@@ -208,21 +274,25 @@ export default function BOMPage() {
           }),
         ]);
         setEditingBOM(row);
-        setFormProduct(detail.mdItem?.name ?? detail.name);
-        setFormCustomer(detail.mdCompany?.name ?? '');
-        setFormVersion(detail.versionNo);
+        const hdr = templateHeaderFields(detail);
+        setFormProduct(hdr.product);
+        setFormCustomer(hdr.customer);
+        setFormVersion(hdr.version);
         setFormChildBOMs([emptyChildBOM()]);
-        setCommittedMaterials(lineRes.items.map(d => ({
-          _key: crypto.randomUUID(),
-          materialCode: d.mdItemUuid ?? '',
-          materialName: d.mdItem?.name ?? d.mdItemAlias?.name ?? '',
-          specification: '',
-          unit: d.mdUom?.name ?? d.mdUom?.code ?? '',
-          mdUomUuid: d.mdUomUuid ?? '',
-          quantity: String(d.qtyPer),
-          manufacturer: '',
-          note: d.remark ?? '',
-        })));
+        setCommittedMaterials(lineRes.items.map(raw => {
+          const d = normalizeBomLineFromApi(raw);
+          return {
+            _key: crypto.randomUUID(),
+            materialCode: d.mdItemUuid ?? '',
+            materialName: d.mdItem?.name ?? d.mdItemAlias?.name ?? '',
+            specification: '',
+            unit: d.mdUom?.name ?? d.mdUom?.code ?? '',
+            mdUomUuid: d.mdUomUuid ?? '',
+            quantity: String(d.qtyPer ?? ''),
+            manufacturer: '',
+            note: d.remark ?? '',
+          };
+        }));
         setDraftMaterial(emptyMaterial());
         setShowForm(true);
       } catch {
