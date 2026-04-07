@@ -1,4 +1,4 @@
-,// Excel Import Parser - Regex + Dictionary matching engine
+// Excel Import Parser - Regex + Dictionary matching engine
 import * as XLSX from 'xlsx';
 
 // ── Types ──
