@@ -435,22 +435,24 @@ export default function PurchaseRequestsPage() {
                   <TableRow key={row._key}>
                     <TableCell className="p-1"><Input value={row.materialCode} disabled className="h-8 text-sm font-mono bg-muted/50" /></TableCell>
                     <TableCell className="p-1">
-                      <SuggestInputText value={row.materialName} selectedUuid={row.materialUuid}
+                      <SuggestInputWithQuickAdd value={row.materialName} selectedUuid={row.materialUuid}
                         onChange={v => handleMatFieldChange(i, 'materialName', v)}
                         onSelect={item => handleMatSelect(i, 'materialName', item)}
-                        type="material" placeholder={t('bom.materialName')} />
+                        type="material" quickAddType="material" placeholder={t('bom.materialName')} />
                     </TableCell>
                     <TableCell className="p-1">
-                      <SuggestInputText value={row.specification}
+                      <SuggestInputWithQuickAdd value={row.specification}
                         onChange={v => handleMatFieldChange(i, 'specification', v)}
                         onSelect={item => handleMatSelect(i, 'specification', item)}
-                        type="specification" placeholder={t('bom.specification')} />
+                        type="specification" quickAddType="specification"
+                        materialUuid={row.materialUuid}
+                        placeholder={t('bom.specification')} />
                     </TableCell>
                     <TableCell className="p-1">
-                      <SuggestInputText value={row.unit}
+                      <SuggestInputWithQuickAdd value={row.unit}
                         onChange={v => handleMatFieldChange(i, 'unit', v)}
                         onSelect={item => handleMatSelect(i, 'unit', item)}
-                        type="unit" placeholder={t('bom.unit')} />
+                        type="unit" quickAddType="unit" placeholder={t('bom.unit')} />
                     </TableCell>
                     <TableCell className="p-1">
                       <Input type="number" value={row.quantity}
@@ -458,10 +460,10 @@ export default function PurchaseRequestsPage() {
                         className="h-8 text-sm" />
                     </TableCell>
                     <TableCell className="p-1">
-                      <SuggestInputText value={row.manufacturer}
+                      <SuggestInputWithQuickAdd value={row.manufacturer}
                         onChange={v => handleMatFieldChange(i, 'manufacturer', v)}
                         onSelect={item => handleMatSelect(i, 'manufacturer', item)}
-                        type="manufacturer" placeholder={t('bom.manufacturer')} />
+                        type="manufacturer" quickAddType="manufacturer" placeholder={t('bom.manufacturer')} />
                     </TableCell>
                     <TableCell className="p-1">
                       <Input type="number" value={row.estimatedPrice}
