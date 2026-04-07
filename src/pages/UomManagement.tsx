@@ -26,12 +26,17 @@ const UOM_SCOPES = [
   { value: 2, labelKey: 'uom.scopes.product' },
 ] as const;
 
+/** Chỉ dùng cho bộ lọc danh sách: Tất cả / NVL / Sản phẩm (không lọc riêng “Dùng chung”). */
+const UOM_SCOPE_FILTER = [
+  { value: 1, labelKey: 'uom.scopes.material' },
+  { value: 2, labelKey: 'uom.scopes.product' },
+] as const;
+
 const INITIAL_FORM: UomCreateBody = { code: '', name: '', type: 0, decimalPlaces: 0, status: 1 };
 
-/** Bộ lọc phạm vi: NVL → dùng chung + NVL; SP → dùng chung + SP; chỉ dùng chung → [0]. */
+/** NVL → dùng chung + NVL; SP → dùng chung + SP; tất cả → không lọc theo type. */
 function typesFilterForScope(scope: string): number[] | undefined {
   if (scope === 'all') return undefined;
-  if (scope === '0') return [0];
   if (scope === '1') return [0, 1];
   if (scope === '2') return [0, 2];
   return undefined;
@@ -218,7 +223,7 @@ export default function UomManagementPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t('common.all')}</SelectItem>
-                  {UOM_SCOPES.map((s) => (
+                  {UOM_SCOPE_FILTER.map((s) => (
                     <SelectItem key={s.value} value={String(s.value)}>
                       {t(s.labelKey)}
                     </SelectItem>
