@@ -438,6 +438,10 @@ export default function BOMPage() {
       toast.error(t('errors.system'));
       return;
     }
+    if (editingBOM && !editingSnapshot) {
+      toast.error(t('errors.system') + ': ' + 'Không tải được dữ liệu BOM để sửa, vui lòng đóng form và mở lại.');
+      return;
+    }
     const childRefs = formChildBOMs
       .filter(r => r.childTemplateUuid && r.quantity)
       .map(r => ({
@@ -448,12 +452,21 @@ export default function BOMPage() {
       }));
     const rows = committedMaterials.filter(r => r.materialName || r.quantity);
     if (rows.length === 0) {
-      toast.warning(t('bom.fillAllFields'));
+      toast.warning(t('bom.fillAllFields') + ': ' + t('bom.materialList'));
       return;
     }
-    for (const row of rows) {
-      if (!row.materialName?.trim() || !row.quantity || !row.mdUomUuid) {
-        toast.warning(t('bom.fillAllFields'));
+    for (let idx = 0; idx < rows.length; idx++) {
+      const row = rows[idx];
+      const qty = Number(row.quantity);
+      if (!row.materialName?.trim() || !row.quantity || !Number.isFinite(qty) || qty <= 0 || !row.mdUomUuid) {
+        toast.warning(`${t('bom.fillAllFields')}: ${t('bom.materialList')} #${idx + 1}`);
+        return;
+      }
+    }
+    for (let idx = 0; idx < childRefs.length; idx++) {
+      const r = childRefs[idx];
+      if (!r.mdChildProductBomTemplateUuid || !Number.isFinite(r.qtyPer) || r.qtyPer <= 0) {
+        toast.warning(`${t('bom.fillAllFields')}: ${t('bom.childBOMs')} #${idx + 1}`);
         return;
       }
     }
