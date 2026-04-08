@@ -155,6 +155,14 @@ function createApiClient(): AxiosInstance {
       }
     }
 
+    if (import.meta.env.DEV) {
+      const m = (config.method ?? "get").toUpperCase();
+      const url = `${config.baseURL ?? ""}${config.url ?? ""}`;
+      // Helpful when debugging "button click doesn't call API"
+      // eslint-disable-next-line no-console
+      console.debug("[api]", m, url, { params: config.params, data: config.data });
+    }
+
     return config;
   });
 

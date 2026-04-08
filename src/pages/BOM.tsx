@@ -433,12 +433,29 @@ export default function BOMPage() {
   };
 
   const handleSave = async () => {
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.debug('[bom] save clicked', {
+        editing: !!editingBOM,
+        hasSnapshot: !!editingSnapshot,
+        committedMaterials: committedMaterials.length,
+        formChildBOMs: formChildBOMs.length,
+      });
+    }
     const user = getAuthUser();
     if (!user?.mdCompanyUuid) {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.debug('[bom] save blocked: missing mdCompanyUuid');
+      }
       toast.error(t('errors.system'));
       return;
     }
     if (editingBOM && !editingSnapshot) {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.debug('[bom] save blocked: editingSnapshot is null', { editingBOM });
+      }
       toast.error(t('errors.system') + ': ' + 'Không tải được dữ liệu BOM để sửa, vui lòng đóng form và mở lại.');
       return;
     }
@@ -452,6 +469,10 @@ export default function BOMPage() {
       }));
     const rows = committedMaterials.filter(r => r.materialName || r.quantity);
     if (rows.length === 0) {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.debug('[bom] save blocked: no material rows after filter', { committedMaterials });
+      }
       toast.warning(t('bom.fillAllFields') + ': ' + t('bom.materialList'));
       return;
     }
@@ -459,6 +480,10 @@ export default function BOMPage() {
       const row = rows[idx];
       const qty = Number(row.quantity);
       if (!row.materialName?.trim() || !row.quantity || !Number.isFinite(qty) || qty <= 0 || !row.mdUomUuid) {
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.debug('[bom] save blocked: invalid material row', { idx, row });
+        }
         toast.warning(`${t('bom.fillAllFields')}: ${t('bom.materialList')} #${idx + 1}`);
         return;
       }
@@ -466,12 +491,20 @@ export default function BOMPage() {
     for (let idx = 0; idx < childRefs.length; idx++) {
       const r = childRefs[idx];
       if (!r.mdChildProductBomTemplateUuid || !Number.isFinite(r.qtyPer) || r.qtyPer <= 0) {
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.debug('[bom] save blocked: invalid child ref', { idx, r });
+        }
         toast.warning(`${t('bom.fillAllFields')}: ${t('bom.childBOMs')} #${idx + 1}`);
         return;
       }
     }
     try {
       if (editingBOM && editingSnapshot) {
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.debug('[bom] saving: update template', { uuid: editingBOM.id, childRefsCount: childRefs.length, materialRows: rows.length });
+        }
         await productBomTemplateService.update(editingBOM.id, {
           mdCompanyUuid: user.mdCompanyUuid,
           mdItemUuid: editingSnapshot.mdItemUuid || undefined,
@@ -538,6 +571,10 @@ export default function BOMPage() {
           remark: row.note || undefined,
         })),
       };
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.debug('[bom] saving: create template', { childRefsCount: childRefs.length, materialRows: rows.length });
+      }
       await productBomTemplateService.create(body);
       toast.success(t('bom.createBOM') + ' ' + t('errors.success'));
       setShowForm(false);
