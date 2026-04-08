@@ -175,6 +175,7 @@ import { SuggestInputWithQuickAdd } from '@/components/SuggestInputWithQuickAdd'
 import type { SuggestData } from '@/api/suggestApi';
 import { ExcelImportPreview } from '@/components/ExcelImportPreview';
 import type { ParsedRow } from '@/utils/excelParser';
+import { MatOpsApiError, ApiEnvelopeError } from '@/lib/apiClient';
 
 type DateFilter = DatePresetKey | 'all';
 
@@ -529,8 +530,21 @@ export default function BOMPage() {
       setShowForm(false);
       setEditingBOM(null);
       await loadData();
-    } catch {
-      toast.error(t('errors.system'));
+    } catch (err) {
+      // Surface backend errorCode/message instead of a generic system error.
+      if (err instanceof MatOpsApiError) {
+        toast.error(`${t('errors.system')}: ${err.errorMessage || err.message} (code ${err.errorCode})`);
+        return;
+      }
+      if (err instanceof ApiEnvelopeError) {
+        toast.error(`${t('errors.system')}: ${err.message || 'Request failed'}`);
+        return;
+      }
+      const msg =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message?: unknown }).message ?? '')
+          : '';
+      toast.error(msg ? `${t('errors.system')}: ${msg}` : t('errors.system'));
     }
   };
 
