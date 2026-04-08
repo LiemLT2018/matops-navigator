@@ -478,6 +478,25 @@ export default function BOMPage() {
         unitName: r.unit || 'Bộ',
         remark: r.note || undefined,
       }));
+    // If user typed child BOM but didn't pick from suggestions, block save (backend requires UUID).
+    const hasUnselectedChild = formChildBOMs.some(r => !!r.bomName?.trim() && !r.childTemplateUuid);
+    if (hasUnselectedChild) {
+      toast.warning(`${t('bom.fillAllFields')}: ${t('bom.childBOMs')} (hãy chọn BOM từ gợi ý)`);
+      return;
+    }
+
+    // If user started typing draft material but didn't commit/complete it, block save to avoid surprises.
+    const draftTouched =
+      !!draftMaterial.materialName?.trim() ||
+      !!draftMaterial.quantity ||
+      !!draftMaterial.unit?.trim() ||
+      !!draftMaterial.note?.trim() ||
+      !!draftMaterial.specification?.trim() ||
+      !!draftMaterial.manufacturer?.trim();
+    if (draftTouched && !isMaterialRowComplete(draftMaterial)) {
+      toast.warning(`${t('bom.fillAllFields')}: ${t('bom.materialList')} (dòng nhập nhanh chưa đủ dữ liệu)`);
+      return;
+    }
     // If the user filled the draft row but forgot to click "Add to BOM",
     // include it automatically so "Save" matches user expectations.
     const effectiveMaterials = isMaterialRowComplete(draftMaterial)
@@ -547,6 +566,17 @@ export default function BOMPage() {
         setShowForm(false);
         setEditingBOM(null);
         setEditingSnapshot(null);
+        // Clear cached detail/expand data so UI refetches latest lines after save
+        setBomDetails(prev => {
+          const next = { ...prev };
+          delete next[editingBOM.id];
+          return next;
+        });
+        setBomChildRefs(prev => {
+          const next = { ...prev };
+          delete next[editingBOM.id];
+          return next;
+        });
         await loadData();
         return;
       }
@@ -577,6 +607,9 @@ export default function BOMPage() {
       toast.success(t('bom.createBOM') + ' ' + t('errors.success'));
       setShowForm(false);
       setEditingBOM(null);
+      // New BOM created; clear caches to avoid stale expansions
+      setBomDetails({});
+      setBomChildRefs({});
       await loadData();
     } catch (err: unknown) {
       // eslint-disable-next-line no-console
