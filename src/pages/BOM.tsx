@@ -179,7 +179,16 @@ import type { ParsedRow } from '@/utils/excelParser';
 type DateFilter = DatePresetKey | 'all';
 
 interface FormChildBOM {
-  _key: string; bomCode: string; bomName: string; quantity: string; unit: string; note: string;
+  _key: string;
+  /** UUID của BOM template con (để lưu quan hệ xuống backend). */
+  childTemplateUuid: string;
+  /** Mã BOM hiển thị (BOMxxx). */
+  bomCode: string;
+  /** Text hiển thị (code — name). */
+  bomName: string;
+  quantity: string;
+  unit: string;
+  note: string;
 }
 interface FormMaterial {
   _key: string;
@@ -207,7 +216,7 @@ interface EditingBomSnapshot {
   initialLineUuids: string[];
 }
 
-const emptyChildBOM = (): FormChildBOM => ({ _key: crypto.randomUUID(), bomCode: '', bomName: '', quantity: '', unit: 'Bộ', note: '' });
+const emptyChildBOM = (): FormChildBOM => ({ _key: crypto.randomUUID(), childTemplateUuid: '', bomCode: '', bomName: '', quantity: '', unit: 'Bộ', note: '' });
 const emptyMaterial = (): FormMaterial => ({
   _key: crypto.randomUUID(),
   itemCode: '',
@@ -354,7 +363,29 @@ export default function BOMPage() {
         (raw.mdBusinessPartnerUuid as string | undefined) ??
         (raw.MdBusinessPartnerUuid as string | undefined);
       setFormCustomerUuid(bp ? String(bp) : '');
-      setFormChildBOMs([emptyChildBOM()]);
+      const childRefsRaw = (raw.childRefs ?? raw.ChildRefs) as unknown;
+      const childRefs = Array.isArray(childRefsRaw) ? (childRefsRaw as Array<Record<string, unknown>>) : [];
+      const mappedChildRows = childRefs
+        .map((c) => {
+          const childUuid = String(c.mdChildProductBomTemplateUuid ?? c.MdChildProductBomTemplateUuid ?? '');
+          const qty = String(c.qtyPer ?? c.QtyPer ?? '');
+          const unit = String(c.unitName ?? c.UnitName ?? 'Bộ');
+          const note = String(c.remark ?? c.Remark ?? '');
+          const childCode = String(c.childCode ?? c.ChildCode ?? '');
+          const childName = String(c.childName ?? c.ChildName ?? '');
+          const displayName = childCode && childName ? `${childCode} — ${childName}` : (childName || childCode);
+          return {
+            _key: crypto.randomUUID(),
+            childTemplateUuid: childUuid,
+            bomCode: childCode,
+            bomName: displayName,
+            quantity: qty,
+            unit,
+            note,
+          } satisfies FormChildBOM;
+        })
+        .filter(r => r.childTemplateUuid);
+      setFormChildBOMs(mappedChildRows.length > 0 ? [...mappedChildRows, emptyChildBOM()] : [emptyChildBOM()]);
       setCommittedMaterials(lineRes.items.map(raw => {
         const d = normalizeBomLineFromApi(raw);
         return {
@@ -406,6 +437,14 @@ export default function BOMPage() {
       toast.error(t('errors.system'));
       return;
     }
+    const childRefs = formChildBOMs
+      .filter(r => r.childTemplateUuid && r.quantity)
+      .map(r => ({
+        mdChildProductBomTemplateUuid: r.childTemplateUuid,
+        qtyPer: Number(r.quantity),
+        unitName: r.unit || 'Bộ',
+        remark: r.note || undefined,
+      }));
     const rows = committedMaterials.filter(r => r.materialName || r.quantity);
     if (rows.length === 0) {
       toast.warning(t('bom.fillAllFields'));
@@ -428,6 +467,7 @@ export default function BOMPage() {
           versionNo: formVersion.trim() || 'v1',
           revisionNo: editingSnapshot.revisionNo,
           status: editingSnapshot.status,
+          childRefs,
         });
 
         const templateUuid = editingBOM.id;
@@ -473,6 +513,7 @@ export default function BOMPage() {
         versionNo: formVersion.trim() || 'v1',
         revisionNo: 0,
         status: 1,
+        childRefs,
         lines: rows.map((row, i) => ({
           mdItemUuid: row.materialCode || undefined,
           name: row.materialCode ? undefined : row.materialName.trim(),
@@ -590,17 +631,18 @@ export default function BOMPage() {
   // BOM suggest handler
   const handleBomSuggestSelect = (index: number, item: SuggestData) => {
     const updated = [...formChildBOMs];
-    updated[index] = { ...updated[index], bomCode: item.uuid, bomName: item.name };
+    // show BOM code in the "code" column; keep name as display text
+    updated[index] = { ...updated[index], childTemplateUuid: item.uuid, bomCode: item.rawText || '', bomName: item.name };
     setFormChildBOMs(updated);
   };
 
   const handleBomNameChange = (index: number, value: string) => {
     const updated = [...formChildBOMs];
-    updated[index] = { ...updated[index], bomName: value, bomCode: '' };
+    updated[index] = { ...updated[index], bomName: value, bomCode: '', childTemplateUuid: '' };
     setFormChildBOMs(updated);
   };
 
-  const isChildBOMRowComplete = (row: FormChildBOM) => row.bomName && row.quantity;
+  const isChildBOMRowComplete = (row: FormChildBOM) => !!row.childTemplateUuid && !!row.quantity;
 
   const addChildBOMRow = () => {
     const last = formChildBOMs[formChildBOMs.length - 1];

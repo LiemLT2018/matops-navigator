@@ -167,6 +167,35 @@ export async function suggestSearch(
     }
   }
 
+  if (type === 'bom') {
+    try {
+      const user = getAuthUser();
+      const res = await productBomTemplateService.list({
+        pageIndex: 1,
+        pageSize: limit,
+        isPaging: 1,
+        typeFind: 1,
+        keyword: q,
+        mdCompanyUuid: user?.mdCompanyUuid,
+      });
+      const items: SuggestData[] = res.items.map(r => {
+        const productName = r.mdItem?.name ?? r.name ?? '';
+        const display = `${r.code} — ${productName}`.trim();
+        return {
+          type: 'bom',
+          uuid: r.uuid, // template uuid
+          name: display,
+          rawText: r.code, // expose code for UI columns
+          normalizedName: removeViDiacritics(display),
+          alias: [r.code, productName].filter(Boolean),
+        };
+      });
+      return { type, items, limit, hasMore: res.pagination.totalCount > items.length };
+    } catch {
+      // fall through to mock
+    }
+  }
+
   await new Promise(r => setTimeout(r, 80 + Math.random() * 120));
 
   const data = MOCK_DATA[type] || [];

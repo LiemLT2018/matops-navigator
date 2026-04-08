@@ -488,6 +488,13 @@ export interface ProductBomTemplateCreateLineBody {
   remark?: string | null;
 }
 
+export interface ProductBomTemplateChildRefBody {
+  mdChildProductBomTemplateUuid: string;
+  qtyPer: number;
+  unitName: string;
+  remark?: string | null;
+}
+
 export interface ProductBomTemplateCreateBody {
   mdCompanyUuid: string;
   mdBusinessPartnerUuid?: string | null;
@@ -499,6 +506,7 @@ export interface ProductBomTemplateCreateBody {
   status?: number;
   remark?: string | null;
   lines?: ProductBomTemplateCreateLineBody[];
+  childRefs?: ProductBomTemplateChildRefBody[];
 }
 
 export interface ProductBomTemplateListQuery extends ListQuery {
