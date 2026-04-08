@@ -2,7 +2,9 @@
   "app": {
     "name": "MatOps Platform",
     "tagline": "Control Material & Manufacturing in Real-Time",
-    "logout": "Log out"
+    "logout": "Log out",
+    "currentCompany": "Current company",
+    "companySwitched": "Active company updated"
   },
   "nav": {
     "dashboard": "Dashboard",

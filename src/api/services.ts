@@ -412,6 +412,19 @@ export const authService = {
       tokenType: string;
       expiresAtUtc: string;
       user: { uuid: string; account: string; name: string; mdCompanyUuid: string; mdDepartmentUuid: string | null };
+      allowedCompanies?: { uuid: string; code: string; name: string; isDefault?: boolean }[];
     };
+  },
+
+  /** Companies the current user can switch to (requires tenant session cookie from login). */
+  myCompanies: async () => {
+    const res = await apiClient.get('api/Auth/my-companies');
+    return res.data as { uuid: string; code: string; name: string; isDefault?: boolean }[];
+  },
+
+  /** Switch active tenant (server updates Redis session). */
+  switchCompany: async (mdCompanyUuid: string) => {
+    const res = await apiClient.post('api/Auth/switch-company', { mdCompanyUuid });
+    return res.data as { mdCompanyUuid: string; code: string; name: string };
   },
 };

@@ -46,7 +46,10 @@ export default function LoginPage() {
       const res = await authService.login(username.trim(), encrypted);
       setAuthSession({
         accessToken: res.accessToken,
-        user: res.user,
+        user: {
+          ...res.user,
+          allowedCompanies: res.allowedCompanies ?? [],
+        },
         expiresAtUtc: res.expiresAtUtc,
         rememberMe,
       });

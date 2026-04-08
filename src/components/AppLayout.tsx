@@ -2,9 +2,11 @@ import { Outlet } from 'react-router-dom';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { AppHeader } from '@/components/AppHeader';
+import { TenantProvider } from '@/context/TenantContext';
 
 export function AppLayout() {
   return (
+    <TenantProvider>
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
@@ -16,5 +18,6 @@ export function AppLayout() {
         </div>
       </div>
     </SidebarProvider>
+    </TenantProvider>
   );
 }

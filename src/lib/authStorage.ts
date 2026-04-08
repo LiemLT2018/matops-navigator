@@ -2,12 +2,21 @@ const TOKEN_KEY = "matops_token";
 const USER_KEY = "matops_user";
 const EXPIRES_KEY = "matops_token_expires_at";
 
+export type AllowedCompany = {
+  uuid: string;
+  code: string;
+  name: string;
+  isDefault?: boolean;
+};
+
 export type MatopsAuthUser = {
   uuid: string;
   account: string;
   name: string;
   mdCompanyUuid: string;
   mdDepartmentUuid: string | null;
+  /** Companies the user may switch to (when using session+switch-tenant API). */
+  allowedCompanies?: AllowedCompany[];
 };
 
 /** Token có thể nằm ở localStorage (duy trì) hoặc sessionStorage (chỉ phiên tab). */
@@ -65,4 +74,53 @@ export function clearAuthSession() {
       /* ignore */
     }
   }
+}
+
+/** True if the access token is stored in localStorage (Remember me). */
+export function usesPersistentStorage(): boolean {
+  try {
+    return !!localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return false;
+  }
+}
+
+/** Update active company after Switch Tenant without re-login. */
+export function updateActiveCompanyInSession(mdCompanyUuid: string) {
+  const token = getAccessToken();
+  const user = getAuthUser();
+  if (!token || !user) return;
+
+  const exp =
+    localStorage.getItem(EXPIRES_KEY) || sessionStorage.getItem(EXPIRES_KEY) || "";
+  const rememberMe = usesPersistentStorage();
+
+  const next: MatopsAuthUser = {
+    ...user,
+    mdCompanyUuid,
+  };
+
+  setAuthSession({
+    accessToken: token,
+    user: next,
+    expiresAtUtc: exp,
+    rememberMe,
+  });
+}
+
+export function mergeAllowedCompaniesIntoSession(companies: AllowedCompany[]) {
+  const token = getAccessToken();
+  const user = getAuthUser();
+  if (!token || !user) return;
+
+  const exp =
+    localStorage.getItem(EXPIRES_KEY) || sessionStorage.getItem(EXPIRES_KEY) || "";
+  const rememberMe = usesPersistentStorage();
+
+  setAuthSession({
+    accessToken: token,
+    user: { ...user, allowedCompanies: companies },
+    expiresAtUtc: exp,
+    rememberMe,
+  });
 }

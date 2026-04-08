@@ -2,7 +2,9 @@
   "app": {
     "name": "MatOps Platform",
     "tagline": "Control Material & Manufacturing in Real-Time",
-    "logout": "Đăng xuất"
+    "logout": "Đăng xuất",
+    "currentCompany": "Công ty hiện tại",
+    "companySwitched": "Đã chuyển công ty"
   },
   "nav": {
     "dashboard": "Tổng quan",

@@ -107,11 +107,16 @@ function clearSessionAndRedirectToLogin() {
 }
 
 function createApiClient(): AxiosInstance {
-  const baseURL = import.meta.env.VITE_API_URL || getMatopsConfig().BASE_URL || "";
+  /** Use `VITE_API_URL=""` so requests stay same-origin and Vite proxy can attach session cookies. */
+  const baseURL =
+    import.meta.env.VITE_API_URL ??
+    getMatopsConfig().BASE_URL ??
+    "";
 
   const instance = axios.create({
     baseURL,
     timeout: 30000,
+    withCredentials: true,
     headers: {
       "Content-Type": "application/json",
     },
