@@ -13,7 +13,8 @@ export default defineConfig(({ mode }) => ({
     },
     proxy: {
       "/api": {
-        target: "http://localhost:5079",
+        // MatOps.Api.Host (erd_matops_api); Tenant.Api defaults to http://localhost:5079
+        target: "http://localhost:5145",
         changeOrigin: true,
       },
     },
