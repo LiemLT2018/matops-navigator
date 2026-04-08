@@ -15,7 +15,11 @@ import {
   productBomTemplateLineService,
   businessPartnerService,
 } from '@/api/services';
+<<<<<<< Updated upstream
 import { getAuthUser, getAccessToken } from '@/lib/authStorage';
+=======
+import { getAccessToken, getAuthUser } from '@/lib/authStorage';
+>>>>>>> Stashed changes
 import type {
   ProductBomTemplateLineListRow,
   ProductBomTemplateListRow,
@@ -160,6 +164,7 @@ function buildEditingSnapshot(detail: unknown, lineRows: unknown[]): EditingBomS
     })
     .filter(Boolean);
   return {
+    mdCompanyUuid: String(r.mdCompanyUuid ?? r.MdCompanyUuid ?? ''),
     mdItemUuid: String(r.mdItemUuid ?? r.MdItemUuid ?? ''),
     code: String(r.code ?? r.Code ?? ''),
     revisionNo: Number(r.revisionNo ?? r.RevisionNo ?? 0),
@@ -210,6 +215,7 @@ interface FormMaterial {
 
 /** Snapshot header + danh sách dòng cũ để PUT header và đồng bộ dòng */
 interface EditingBomSnapshot {
+  mdCompanyUuid: string;
   mdItemUuid: string;
   code: string;
   revisionNo: number;
@@ -443,10 +449,20 @@ export default function BOMPage() {
       });
     }
     const user = getAuthUser();
+<<<<<<< Updated upstream
     if (!user?.mdCompanyUuid) {
       // eslint-disable-next-line no-console
       console.error('[bom] save blocked: missing user or mdCompanyUuid', { user, token: !!getAccessToken() });
       toast.error(t('errors.system') + ': Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+=======
+    const mdCompanyUuid = user?.mdCompanyUuid || editingSnapshot?.mdCompanyUuid || '';
+    if (!mdCompanyUuid) {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.debug('[bom] save blocked: missing user or mdCompanyUuid', { user, token: !!getAccessToken() });
+      }
+      toast.error(t('errors.system'));
+>>>>>>> Stashed changes
       return;
     }
     if (editingBOM && !editingSnapshot) {
@@ -504,7 +520,7 @@ export default function BOMPage() {
           console.debug('[bom] saving: update template', { uuid: editingBOM.id, childRefsCount: childRefs.length, materialRows: rows.length });
         }
         await productBomTemplateService.update(editingBOM.id, {
-          mdCompanyUuid: user.mdCompanyUuid,
+          mdCompanyUuid,
           mdItemUuid: editingSnapshot.mdItemUuid || undefined,
           mdBusinessPartnerUuid: formCustomerUuid || null,
           code: editingSnapshot.code,
@@ -534,7 +550,7 @@ export default function BOMPage() {
       }
 
       const body: ProductBomTemplateCreateBody = {
-        mdCompanyUuid: user.mdCompanyUuid,
+        mdCompanyUuid,
         mdBusinessPartnerUuid: formCustomerUuid || null,
         name: formProduct.trim() || 'BOM',
         versionNo: formVersion.trim() || 'v1',
