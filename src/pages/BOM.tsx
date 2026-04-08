@@ -15,7 +15,7 @@ import {
   productBomTemplateLineService,
   businessPartnerService,
 } from '@/api/services';
-import { getAuthUser } from '@/lib/authStorage';
+import { getAuthUser, getAccessToken } from '@/lib/authStorage';
 import type {
   ProductBomTemplateLineListRow,
   ProductBomTemplateListRow,
@@ -444,11 +444,9 @@ export default function BOMPage() {
     }
     const user = getAuthUser();
     if (!user?.mdCompanyUuid) {
-      if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
-        console.debug('[bom] save blocked: missing mdCompanyUuid');
-      }
-      toast.error(t('errors.system'));
+      // eslint-disable-next-line no-console
+      console.error('[bom] save blocked: missing user or mdCompanyUuid', { user, token: !!getAccessToken() });
+      toast.error(t('errors.system') + ': Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
       return;
     }
     if (editingBOM && !editingSnapshot) {
