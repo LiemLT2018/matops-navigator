@@ -324,17 +324,33 @@ export default function BOMPage() {
     if (expandedId === id) { setExpandedId(null); return; }
     if (!bomDetails[id]) {
       try {
-        const lineRes = await productBomTemplateLineService.list({
-          mdProductBomTemplateUuid: id,
-          isPaging: 0,
-          pageSize: 500,
-          typeFind: EdTypeFind.LIST,
-        });
+        const [lineRes, detail] = await Promise.all([
+          productBomTemplateLineService.list({
+            mdProductBomTemplateUuid: id,
+            isPaging: 0,
+            pageSize: 500,
+            typeFind: EdTypeFind.LIST,
+          }),
+          productBomTemplateService.get(id),
+        ]);
         setBomDetails(prev => ({
           ...prev,
           [id]: lineRes.items.map(d => mapLineToBOMDetail(normalizeBomLineFromApi(d))),
         }));
-        setBomChildRefs(prev => ({ ...prev, [id]: [] as BOMChildRef[] }));
+        const raw = detail as unknown as Record<string, unknown>;
+        const childRefsRaw = (raw.childRefs ?? raw.ChildRefs) as unknown;
+        const childRefs = Array.isArray(childRefsRaw) ? (childRefsRaw as Array<Record<string, unknown>>) : [];
+        setBomChildRefs(prev => ({
+          ...prev,
+          [id]: childRefs.map((c) => ({
+            id: String(c.uuid ?? c.Uuid ?? crypto.randomUUID()),
+            bomCode: String(c.childCode ?? c.ChildCode ?? ''),
+            bomName: String(c.childName ?? c.ChildName ?? ''),
+            quantity: Number(c.qtyPer ?? c.QtyPer ?? 0),
+            unit: String(c.unitName ?? c.UnitName ?? ''),
+            note: String(c.remark ?? c.Remark ?? ''),
+          })),
+        }));
       } catch {
         toast.error(t('errors.system'));
       }
