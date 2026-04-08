@@ -15,11 +15,7 @@ import {
   productBomTemplateLineService,
   businessPartnerService,
 } from '@/api/services';
-<<<<<<< Updated upstream
-import { getAuthUser, getAccessToken } from '@/lib/authStorage';
-=======
 import { getAccessToken, getAuthUser } from '@/lib/authStorage';
->>>>>>> Stashed changes
 import type {
   ProductBomTemplateLineListRow,
   ProductBomTemplateListRow,
@@ -449,20 +445,21 @@ export default function BOMPage() {
       });
     }
     const user = getAuthUser();
-<<<<<<< Updated upstream
-    if (!user?.mdCompanyUuid) {
-      // eslint-disable-next-line no-console
-      console.error('[bom] save blocked: missing user or mdCompanyUuid', { user, token: !!getAccessToken() });
-      toast.error(t('errors.system') + ': Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
-=======
     const mdCompanyUuid = user?.mdCompanyUuid || editingSnapshot?.mdCompanyUuid || '';
+    if (!user) {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.debug('[bom] save blocked: missing user', { token: !!getAccessToken() });
+      }
+      toast.error(t('errors.system') + ': Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+      return;
+    }
     if (!mdCompanyUuid) {
       if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
-        console.debug('[bom] save blocked: missing user or mdCompanyUuid', { user, token: !!getAccessToken() });
+        console.debug('[bom] save blocked: missing mdCompanyUuid', { user, token: !!getAccessToken() });
       }
       toast.error(t('errors.system'));
->>>>>>> Stashed changes
       return;
     }
     if (editingBOM && !editingSnapshot) {
