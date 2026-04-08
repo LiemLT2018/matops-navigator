@@ -107,11 +107,14 @@ function clearSessionAndRedirectToLogin() {
 }
 
 function createApiClient(): AxiosInstance {
-  /** Use `VITE_API_URL=""` so requests stay same-origin and Vite proxy can attach session cookies. */
-  const baseURL =
-    import.meta.env.VITE_API_URL ??
-    getMatopsConfig().BASE_URL ??
-    "";
+  /**
+   * Dev: allow same-origin calls so Vite proxy can forward to local backend.
+   * Prod: MUST call the real backend host; same-origin `/api/*` on Lovable will 500.
+   */
+  const envBase = (import.meta.env.VITE_API_URL ?? "").trim();
+  const baseURL = envBase !== ""
+    ? envBase
+    : (import.meta.env.DEV ? "" : (getMatopsConfig().BASE_URL ?? ""));
 
   const instance = axios.create({
     baseURL,
