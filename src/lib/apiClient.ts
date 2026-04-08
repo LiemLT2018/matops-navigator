@@ -31,7 +31,9 @@ export function setAuthTokenGetter(getter: () => string | null | undefined) {
 /** Cùng nguồn với client cũ (`matops_config` + mặc định mobiplus). */
 function getMatopsConfig() {
   const stored = localStorage.getItem("matops_config");
-  const defaults = { BASE_URL: "https://rmgapi.mobiplus.vn", DPS_CERT: "MATOPS_DEFAULT_CERT_2024" };
+  // Default to same-origin so dev/proxy setups work out of the box.
+  // In production (e.g. lovable.dev), users should set BASE_URL in Settings.
+  const defaults = { BASE_URL: "/api", DPS_CERT: "MATOPS_DEFAULT_CERT_2024" };
   if (!stored) return defaults;
   try {
     return { ...defaults, ...JSON.parse(stored) };

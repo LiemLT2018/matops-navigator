@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useTheme } from '@/hooks/useTheme';
 import { Sun, Moon } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
@@ -17,6 +18,9 @@ export default function SettingsPage() {
 
   const handleSave = () => {
     localStorage.setItem('matops_config', JSON.stringify(config));
+    toast.success(t('common.save') + ' ' + t('errors.success'));
+    // apiClient is created once at startup; reload to apply new BASE_URL immediately.
+    setTimeout(() => window.location.reload(), 300);
   };
 
   return (
