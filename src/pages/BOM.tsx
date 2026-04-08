@@ -348,7 +348,7 @@ export default function BOMPage() {
       setFormProduct(hdr.product);
       setFormVersion(hdr.version);
       const dRow = detail as ProductBomTemplateListRow;
-      const raw = detail as Record<string, unknown>;
+      const raw = detail as unknown as Record<string, unknown>;
       const bp =
         dRow.mdBusinessPartnerUuid ??
         (raw.mdBusinessPartnerUuid as string | undefined) ??

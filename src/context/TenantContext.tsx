@@ -36,9 +36,10 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [activeUuid, setActiveUuid] = useState<string | null>(() =>
     getAuthUser()?.mdCompanyUuid ?? null,
   );
-  const [allowed, setAllowed] = useState<AllowedCompany[]>(
-    () => getAuthUser()?.allowedCompanies ?? [],
-  );
+  const [allowed, setAllowed] = useState<AllowedCompany[]>(() => {
+    const raw = getAuthUser()?.allowedCompanies;
+    return Array.isArray(raw) ? raw : [];
+  });
   const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
