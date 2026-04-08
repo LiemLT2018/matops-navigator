@@ -562,7 +562,9 @@ export default function BOMPage() {
       setShowForm(false);
       setEditingBOM(null);
       await loadData();
-    } catch (err) {
+    } catch (err: unknown) {
+      // eslint-disable-next-line no-console
+      console.error('[bom] save error', err);
       // Surface backend errorCode/message instead of a generic system error.
       if (err instanceof MatOpsApiError) {
         toast.error(`${t('errors.system')}: ${err.errorMessage || err.message} (code ${err.errorCode})`);
@@ -571,6 +573,15 @@ export default function BOMPage() {
       if (err instanceof ApiEnvelopeError) {
         toast.error(`${t('errors.system')}: ${err.message || 'Request failed'}`);
         return;
+      }
+      // Axios error with response data
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axErr = err as { response?: { data?: { errorMessage?: string; errorCode?: number }; status?: number } };
+        const serverMsg = axErr.response?.data?.errorMessage;
+        if (serverMsg) {
+          toast.error(`${t('errors.system')}: ${serverMsg} (code ${axErr.response?.data?.errorCode})`);
+          return;
+        }
       }
       const msg =
         err && typeof err === 'object' && 'message' in err
