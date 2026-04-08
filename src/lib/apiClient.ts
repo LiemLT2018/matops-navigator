@@ -119,7 +119,9 @@ function createApiClient(): AxiosInstance {
   const instance = axios.create({
     baseURL,
     timeout: 30000,
-    withCredentials: true,
+    // MatOps API dùng JWT Bearer; không cần gửi cookie cross-site.
+    // withCredentials=true sẽ bị browser chặn nếu server trả `Access-Control-Allow-Origin: *`.
+    withCredentials: false,
     headers: {
       "Content-Type": "application/json",
     },
