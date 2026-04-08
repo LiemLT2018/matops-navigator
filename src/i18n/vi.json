@@ -125,6 +125,8 @@
     "code": "Mã BOM",
     "product": "Sản phẩm",
     "customer": "Khách hàng",
+    "selectCustomer": "Chọn khách hàng",
+    "noCustomer": "— Không chọn —",
     "version": "Phiên bản",
     "status": "Trạng thái",
     "detail": "Chi tiết BOM",

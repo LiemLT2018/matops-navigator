@@ -29,6 +29,7 @@ import {
   ProductBomTemplateListRow, ProductBomTemplateLineListRow,
   ProductBomTemplateListQuery, ProductBomTemplateLineListQuery,
   ProductBomTemplateCreateBody,
+  ProductBomTemplateLineMutateBody,
 } from '@/types/models';
 
 // ============================================================
@@ -277,6 +278,8 @@ export const productBomTemplateService = {
   get: (uuid: string) => getDetail<ProductBomTemplateListRow>(`api/ProductBomTemplate/${uuid}`),
   create: (body: ProductBomTemplateCreateBody) =>
     create<ProductBomTemplateListRow>('api/ProductBomTemplate', body),
+  update: (uuid: string, body: ProductBomTemplateCreateBody) =>
+    update<ProductBomTemplateListRow>(`api/ProductBomTemplate/${uuid}`, body),
   materialSuggestions: (q: string, limit = 50, mdCompanyUuid?: string) =>
     getDetail<BomMaterialSuggestItem[]>(
       `api/ProductBomTemplate/material-suggestions?q=${encodeURIComponent(q)}&limit=${limit}${mdCompanyUuid ? `&mdCompanyUuid=${encodeURIComponent(mdCompanyUuid)}` : ''}`,
@@ -294,6 +297,11 @@ export const productBomTemplateLineService = {
       mdItemUuid: query?.mdItemUuid,
     }),
   get: (uuid: string) => getDetail<ProductBomTemplateLineListRow>(`api/ProductBomTemplateLine/${uuid}`),
+  create: (body: ProductBomTemplateLineMutateBody) =>
+    create<ProductBomTemplateLineListRow>('api/ProductBomTemplateLine', body),
+  update: (uuid: string, body: ProductBomTemplateLineMutateBody) =>
+    update<ProductBomTemplateLineListRow>(`api/ProductBomTemplateLine/${uuid}`, body),
+  delete: (uuid: string) => remove(`api/ProductBomTemplateLine/${uuid}`),
 };
 
 // ============================================================

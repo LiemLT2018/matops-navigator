@@ -451,6 +451,8 @@ export interface ProductBomTemplateListRow {
   revisionNo: number;
   status: number;
   remark: string | null;
+  mdItemUuid?: string;
+  mdBusinessPartnerUuid?: string | null;
   mdItem: { code: string; name: string } | null;
   mdCompany: { code: string; name: string } | null;
   createdAt?: string;
@@ -509,6 +511,20 @@ export interface ProductBomTemplateListQuery extends ListQuery {
 export interface ProductBomTemplateLineListQuery extends ListQuery {
   mdProductBomTemplateUuid?: string;
   mdItemUuid?: string;
+}
+
+/** POST/PUT api/ProductBomTemplateLine — khớp Create/UpdateProductBomTemplateLineCommand. */
+export interface ProductBomTemplateLineMutateBody {
+  mdProductBomTemplateUuid: string;
+  mdItemUuid?: string | null;
+  mdItemAliasUuid?: string | null;
+  name?: string | null;
+  mdUomUuid: string;
+  lineNo: number;
+  qtyPer: number;
+  lossRate: number;
+  code?: string | null;
+  remark?: string | null;
 }
 
 // ============================================================

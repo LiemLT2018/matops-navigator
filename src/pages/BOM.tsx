@@ -13,9 +13,16 @@ import { NumberDisplay } from '@/components/NumberDisplay';
 import {
   productBomTemplateService,
   productBomTemplateLineService,
+  businessPartnerService,
 } from '@/api/services';
 import { getAuthUser } from '@/lib/authStorage';
-import type { ProductBomTemplateLineListRow, ProductBomTemplateListRow, ProductBomTemplateCreateBody } from '@/types/models';
+import type {
+  ProductBomTemplateLineListRow,
+  ProductBomTemplateListRow,
+  ProductBomTemplateCreateBody,
+  ProductBomTemplateLineMutateBody,
+  BusinessPartnerDetail,
+} from '@/types/models';
 import { EdTypeFind } from '@/types/models';
 import type { BOMDetail, BOMChildRef } from '@/api/mockApi';
 
@@ -52,12 +59,14 @@ function bomStatusToBadge(s: number): string {
   }
 }
 
-function mapTemplateToMaster(row: ProductBomTemplateListRow): BOMMaster {
+function mapTemplateToMaster(row: ProductBomTemplateListRow, partnerNames: Record<string, string>): BOMMaster {
+  const pid = row.mdBusinessPartnerUuid;
+  const customer = pid && partnerNames[pid] ? partnerNames[pid] : '—';
   return {
     id: row.uuid,
     code: row.code,
     product: row.mdItem?.name ?? row.name,
-    customer: row.mdCompany?.name ?? '—',
+    customer,
     version: row.revisionNo ? `${row.versionNo} r${row.revisionNo}` : row.versionNo,
     status: bomStatusToBadge(row.status),
     createdDate: row.createdAt ? new Date(row.createdAt).toLocaleDateString('vi-VN') : '—',
@@ -131,16 +140,32 @@ function mapLineToBOMDetail(line: ProductBomTemplateLineListRow): BOMDetail {
   };
 }
 
-/** GET template chi tiết: hỗ trợ PascalCase trên header (mdItem / mdCompany). */
-function templateHeaderFields(raw: ProductBomTemplateListRow): { product: string; customer: string; version: string } {
+/** GET template chi tiết: hỗ trợ PascalCase trên header (mdItem). */
+function templateHeaderFields(raw: ProductBomTemplateListRow): { product: string; version: string } {
   const r = raw as unknown as Record<string, unknown>;
   const mdItem = (r.mdItem ?? r.MdItem) as Record<string, unknown> | undefined;
-  const mdCompany = (r.mdCompany ?? r.MdCompany) as Record<string, unknown> | undefined;
   const fromItem = mdItem ? String(mdItem.name ?? mdItem.Name ?? '') : '';
   const name = String(r.name ?? r.Name ?? raw.name ?? '');
-  const customer = mdCompany ? String(mdCompany.name ?? mdCompany.Name ?? '') : '';
   const version = String(r.versionNo ?? r.VersionNo ?? raw.versionNo ?? '');
-  return { product: fromItem || name, customer, version };
+  return { product: fromItem || name, version };
+}
+
+/** Header + UUID các dòng hiện có trên server (để xóa dòng bị bỏ khi lưu). */
+function buildEditingSnapshot(detail: unknown, lineRows: unknown[]): EditingBomSnapshot {
+  const r = detail as Record<string, unknown>;
+  const initialLineUuids = lineRows
+    .map(x => {
+      const o = x as Record<string, unknown>;
+      return String(o.uuid ?? o.Uuid ?? '');
+    })
+    .filter(Boolean);
+  return {
+    mdItemUuid: String(r.mdItemUuid ?? r.MdItemUuid ?? ''),
+    code: String(r.code ?? r.Code ?? ''),
+    revisionNo: Number(r.revisionNo ?? r.RevisionNo ?? 0),
+    status: Number(r.status ?? r.Status ?? 0),
+    initialLineUuids,
+  };
 }
 import { Plus, Search, ChevronDown, ChevronRight, Upload, LayoutGrid, List, Edit, Copy, Trash2, Download, X, Save, FileSpreadsheet } from 'lucide-react';
 import type { DatePresetKey } from '@/types/api';
@@ -158,6 +183,11 @@ interface FormChildBOM {
 }
 interface FormMaterial {
   _key: string;
+  /** UUID dòng BOM trên server (khi sửa); dòng mới không có */
+  lineUuid?: string;
+  /** Mã vật tư hiển thị (mdItem.code) */
+  itemCode: string;
+  /** UUID vật tư (mdItemUuid) — dùng khi lưu API */
   materialCode: string;
   materialName: string;
   specification: string;
@@ -168,9 +198,19 @@ interface FormMaterial {
   note: string;
 }
 
+/** Snapshot header + danh sách dòng cũ để PUT header và đồng bộ dòng */
+interface EditingBomSnapshot {
+  mdItemUuid: string;
+  code: string;
+  revisionNo: number;
+  status: number;
+  initialLineUuids: string[];
+}
+
 const emptyChildBOM = (): FormChildBOM => ({ _key: crypto.randomUUID(), bomCode: '', bomName: '', quantity: '', unit: 'Bộ', note: '' });
 const emptyMaterial = (): FormMaterial => ({
   _key: crypto.randomUUID(),
+  itemCode: '',
   materialCode: '',
   materialName: '',
   specification: '',
@@ -201,10 +241,15 @@ export default function BOMPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingBOM, setEditingBOM] = useState<BOMMaster | null>(null);
+  const [editingSnapshot, setEditingSnapshot] = useState<EditingBomSnapshot | null>(null);
+
+  /** Khách hàng (đối tác) — dùng cho Select và map tên trên lưới */
+  const [customers, setCustomers] = useState<BusinessPartnerDetail[]>([]);
 
   // Form state
   const [formProduct, setFormProduct] = useState('');
-  const [formCustomer, setFormCustomer] = useState('');
+  /** UUID đối tác khách hàng; rỗng = không gán */
+  const [formCustomerUuid, setFormCustomerUuid] = useState('');
   const [formVersion, setFormVersion] = useState('v1.0');
   const [formChildBOMs, setFormChildBOMs] = useState<FormChildBOM[]>([emptyChildBOM()]);
   const [committedMaterials, setCommittedMaterials] = useState<FormMaterial[]>([]);
@@ -219,16 +264,40 @@ export default function BOMPage() {
     try {
       const user = getAuthUser();
       const statusNum = bomFilterToStatus[statusFilter];
-      const res = await productBomTemplateService.list({
-        pageIndex: page,
-        pageSize: 10,
-        isPaging: 1,
-        typeFind: EdTypeFind.DETAIL_LIST,
-        keyword: search || undefined,
-        status: statusNum,
-        mdCompanyUuid: user?.mdCompanyUuid,
-      });
-      setData(res.items.map(mapTemplateToMaster));
+      const partnerQuery =
+        user?.mdCompanyUuid
+          ? businessPartnerService.list({
+              mdCompanyUuid: user.mdCompanyUuid,
+              isPaging: 0,
+              pageSize: 500,
+              typeFind: EdTypeFind.LIST,
+              type: '0,1',
+            })
+          : Promise.resolve({ items: [] as BusinessPartnerDetail[], pagination: { totalCount: 0, totalPage: 1 } });
+
+      const [res, bpRes] = await Promise.all([
+        productBomTemplateService.list({
+          pageIndex: page,
+          pageSize: 10,
+          isPaging: 1,
+          typeFind: EdTypeFind.DETAIL_LIST,
+          keyword: search || undefined,
+          status: statusNum,
+          mdCompanyUuid: user?.mdCompanyUuid,
+        }),
+        partnerQuery,
+      ]);
+
+      const list = (bpRes.items ?? []) as BusinessPartnerDetail[];
+      setCustomers(list);
+      const partnerNames: Record<string, string> = {};
+      for (const p of list) partnerNames[p.uuid] = p.name;
+
+      setData(
+        res.items.map(r =>
+          mapTemplateToMaster(r as ProductBomTemplateListRow, partnerNames),
+        ),
+      );
       setTotalPages(res.pagination.totalPage);
       setTotalCount(res.pagination.totalCount);
     } catch {
@@ -261,56 +330,69 @@ export default function BOMPage() {
     setExpandedId(id);
   };
 
+  /** Mở form sửa BOM (dùng từ nút Sửa hoặc click dòng ở chế độ Master). Luôn tải API — không phụ thuộc viewMode. */
   const handleMasterClick = async (row: BOMMaster) => {
-    if (viewMode === 'master') {
-      try {
-        const [detail, lineRes] = await Promise.all([
-          productBomTemplateService.get(row.id),
-          productBomTemplateLineService.list({
-            mdProductBomTemplateUuid: row.id,
-            isPaging: 0,
-            pageSize: 500,
-            typeFind: EdTypeFind.LIST,
-          }),
-        ]);
-        setEditingBOM(row);
-        const hdr = templateHeaderFields(detail);
-        setFormProduct(hdr.product);
-        setFormCustomer(hdr.customer);
-        setFormVersion(hdr.version);
-        setFormChildBOMs([emptyChildBOM()]);
-        setCommittedMaterials(lineRes.items.map(raw => {
-          const d = normalizeBomLineFromApi(raw);
-          return {
-            _key: crypto.randomUUID(),
-            materialCode: d.mdItemUuid ?? '',
-            materialName: d.mdItem?.name ?? d.mdItemAlias?.name ?? '',
-            specification: '',
-            unit: d.mdUom?.name ?? d.mdUom?.code ?? '',
-            mdUomUuid: d.mdUomUuid ?? '',
-            quantity: String(d.qtyPer ?? ''),
-            manufacturer: '',
-            note: d.remark ?? '',
-          };
-        }));
-        setDraftMaterial(emptyMaterial());
-        setShowForm(true);
-      } catch {
-        toast.error(t('errors.system'));
-      }
+    try {
+      const [detail, lineRes] = await Promise.all([
+        productBomTemplateService.get(row.id),
+        productBomTemplateLineService.list({
+          mdProductBomTemplateUuid: row.id,
+          isPaging: 0,
+          pageSize: 500,
+          typeFind: EdTypeFind.LIST,
+        }),
+      ]);
+      setEditingBOM(row);
+      setEditingSnapshot(buildEditingSnapshot(detail, lineRes.items));
+      const hdr = templateHeaderFields(detail as ProductBomTemplateListRow);
+      setFormProduct(hdr.product);
+      setFormVersion(hdr.version);
+      const dRow = detail as ProductBomTemplateListRow;
+      const raw = detail as Record<string, unknown>;
+      const bp =
+        dRow.mdBusinessPartnerUuid ??
+        (raw.mdBusinessPartnerUuid as string | undefined) ??
+        (raw.MdBusinessPartnerUuid as string | undefined);
+      setFormCustomerUuid(bp ? String(bp) : '');
+      setFormChildBOMs([emptyChildBOM()]);
+      setCommittedMaterials(lineRes.items.map(raw => {
+        const d = normalizeBomLineFromApi(raw);
+        return {
+          _key: crypto.randomUUID(),
+          lineUuid: d.uuid || undefined,
+          itemCode: d.mdItem?.code ?? '',
+          materialCode: d.mdItemUuid ?? '',
+          materialName: d.mdItem?.name ?? d.mdItemAlias?.name ?? '',
+          specification: '',
+          unit: d.mdUom?.name ?? d.mdUom?.code ?? '',
+          mdUomUuid: d.mdUomUuid ?? '',
+          quantity: String(d.qtyPer ?? ''),
+          manufacturer: '',
+          note: d.remark ?? '',
+        };
+      }));
+      setDraftMaterial(emptyMaterial());
+      setShowForm(true);
+    } catch {
+      toast.error(t('errors.system'));
     }
   };
 
   const handleCreate = () => {
     setEditingBOM(null);
-    setFormProduct(''); setFormCustomer(''); setFormVersion('v1.0');
+    setEditingSnapshot(null);
+    setFormProduct(''); setFormCustomerUuid(''); setFormVersion('v1.0');
     setFormChildBOMs([emptyChildBOM()]);
     setCommittedMaterials([]);
     setDraftMaterial(emptyMaterial());
     setShowForm(true);
   };
 
-  const handleCloseForm = () => { setShowForm(false); setEditingBOM(null); };
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setEditingBOM(null);
+    setEditingSnapshot(null);
+  };
 
   const focusDraftMaterialName = () => {
     requestAnimationFrame(() => {
@@ -335,30 +417,72 @@ export default function BOMPage() {
         return;
       }
     }
-    const body: ProductBomTemplateCreateBody = {
-      mdCompanyUuid: user.mdCompanyUuid,
-      name: formProduct.trim() || 'BOM',
-      versionNo: formVersion.trim() || 'v1',
-      revisionNo: 0,
-      status: 1,
-      lines: rows.map((row, i) => ({
-        mdItemUuid: row.materialCode || undefined,
-        name: row.materialCode ? undefined : row.materialName.trim(),
-        mdUomUuid: row.mdUomUuid,
-        qtyPer: Number(row.quantity),
-        lossRate: 0,
-        lineNo: i + 1,
-        remark: row.note || undefined,
-      })),
-    };
     try {
-      if (editingBOM) {
-        toast.info(t('common.edit'));
+      if (editingBOM && editingSnapshot) {
+        await productBomTemplateService.update(editingBOM.id, {
+          mdCompanyUuid: user.mdCompanyUuid,
+          mdItemUuid: editingSnapshot.mdItemUuid || undefined,
+          mdBusinessPartnerUuid: formCustomerUuid || null,
+          code: editingSnapshot.code,
+          name: formProduct.trim() || 'BOM',
+          versionNo: formVersion.trim() || 'v1',
+          revisionNo: editingSnapshot.revisionNo,
+          status: editingSnapshot.status,
+        });
+
+        const templateUuid = editingBOM.id;
+        const keptLineUuids = new Set(rows.map(r => r.lineUuid).filter(Boolean) as string[]);
+        for (const uid of editingSnapshot.initialLineUuids) {
+          if (!keptLineUuids.has(uid)) {
+            await productBomTemplateLineService.delete(uid);
+          }
+        }
+
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          const lineNo = i + 1;
+          const lineBody: ProductBomTemplateLineMutateBody = {
+            mdProductBomTemplateUuid: templateUuid,
+            mdItemUuid: row.materialCode || undefined,
+            name: row.materialCode ? undefined : row.materialName.trim(),
+            mdUomUuid: row.mdUomUuid,
+            lineNo,
+            qtyPer: Number(row.quantity),
+            lossRate: 0,
+            remark: row.note || undefined,
+          };
+          if (row.lineUuid) {
+            await productBomTemplateLineService.update(row.lineUuid, lineBody);
+          } else {
+            await productBomTemplateLineService.create(lineBody);
+          }
+        }
+
+        toast.success(`${t('bom.editBOM')} ${t('errors.success')}`);
         setShowForm(false);
         setEditingBOM(null);
+        setEditingSnapshot(null);
         await loadData();
         return;
       }
+
+      const body: ProductBomTemplateCreateBody = {
+        mdCompanyUuid: user.mdCompanyUuid,
+        mdBusinessPartnerUuid: formCustomerUuid || null,
+        name: formProduct.trim() || 'BOM',
+        versionNo: formVersion.trim() || 'v1',
+        revisionNo: 0,
+        status: 1,
+        lines: rows.map((row, i) => ({
+          mdItemUuid: row.materialCode || undefined,
+          name: row.materialCode ? undefined : row.materialName.trim(),
+          mdUomUuid: row.mdUomUuid,
+          qtyPer: Number(row.quantity),
+          lossRate: 0,
+          lineNo: i + 1,
+          remark: row.note || undefined,
+        })),
+      };
       await productBomTemplateService.create(body);
       toast.success(t('bom.createBOM') + ' ' + t('errors.success'));
       setShowForm(false);
@@ -513,6 +637,7 @@ export default function BOMPage() {
         } else {
           current.push({
             _key: crypto.randomUUID(),
+            itemCode: '',
             materialCode: pr.materialUuid,
             materialName: pr.materialName,
             specification: pr.specification,
@@ -609,7 +734,22 @@ export default function BOMPage() {
           </div>
           <div>
             <label className="text-sm font-medium text-muted-foreground mb-1 block">{t('bom.customer')}</label>
-            <Input value={formCustomer} onChange={e => setFormCustomer(e.target.value)} />
+            <Select
+              value={formCustomerUuid || '__none__'}
+              onValueChange={v => setFormCustomerUuid(v === '__none__' ? '' : v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={t('bom.selectCustomer')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">{t('bom.noCustomer')}</SelectItem>
+                {customers.map(c => (
+                  <SelectItem key={c.uuid} value={c.uuid}>
+                    {c.code} — {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="text-sm font-medium text-muted-foreground mb-1 block">{t('bom.version')}</label>
@@ -690,7 +830,7 @@ export default function BOMPage() {
               <TableBody>
                 {committedMaterials.map((row, i) => (
                   <TableRow key={row._key}>
-                    <TableCell className="p-1"><Input value={row.materialCode} disabled className="h-8 text-sm font-mono bg-muted/50" /></TableCell>
+                    <TableCell className="p-1"><Input value={row.itemCode || '—'} disabled className="h-8 text-sm font-mono bg-muted/50" title={row.materialCode} /></TableCell>
                     <TableCell className="p-1">
                       <SuggestInputWithQuickAdd value={row.materialName} selectedUuid={row.materialCode}
                         onChange={v => handleCommittedMatFieldChange(i, 'materialName', v)}
@@ -725,14 +865,14 @@ export default function BOMPage() {
                     </TableCell>
                     <TableCell className="p-1">
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCommittedMaterials([...committedMaterials, { ...row, _key: crypto.randomUUID() }])}><Copy className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCommittedMaterials([...committedMaterials, { ...row, _key: crypto.randomUUID(), lineUuid: undefined }])}><Copy className="h-3.5 w-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setCommittedMaterials(committedMaterials.filter((_, j) => j !== i))}><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
                 <TableRow className="bg-muted/20">
-                  <TableCell className="p-1"><Input value={draftMaterial.materialCode} disabled className="h-8 text-sm font-mono bg-muted/50" /></TableCell>
+                  <TableCell className="p-1"><Input value={draftMaterial.itemCode || '—'} disabled className="h-8 text-sm font-mono bg-muted/50" title={draftMaterial.materialCode} /></TableCell>
                   <TableCell className="p-1">
                     <SuggestInputWithQuickAdd id="bom-draft-material-name" value={draftMaterial.materialName} selectedUuid={draftMaterial.materialCode}
                       onChange={v => handleDraftMatFieldChange('materialName', v)}

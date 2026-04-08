@@ -125,6 +125,8 @@
     "code": "BOM Code",
     "product": "Product",
     "customer": "Customer",
+    "selectCustomer": "Select customer",
+    "noCustomer": "— None —",
     "version": "Version",
     "status": "Status",
     "detail": "BOM Detail",
