@@ -1,4 +1,4 @@
-import { productBomTemplateService } from '@/api/services';
+import { itemService, productBomTemplateService } from '@/api/services';
 import { getAuthUser } from '@/lib/authStorage';
 
 // Suggest API — vật tư BOM dùng backend; các loại khác vẫn mock.
@@ -188,6 +188,34 @@ export async function suggestSearch(
           rawText: r.code, // expose code for UI columns
           normalizedName: removeViDiacritics(display),
           alias: [r.code, productName].filter(Boolean),
+        };
+      });
+      return { type, items, limit, hasMore: res.pagination.totalCount > items.length };
+    } catch {
+      // fall through to mock
+    }
+  }
+
+  if (type === 'item') {
+    try {
+      const user = getAuthUser();
+      const res = await itemService.list({
+        pageIndex: 1,
+        pageSize: limit,
+        isPaging: 1,
+        typeFind: 1,
+        keyword: q,
+        mdCompanyUuid: user?.mdCompanyUuid,
+      });
+      const items: SuggestData[] = res.items.map(r => {
+        const display = `${r.code} — ${r.name}`.trim();
+        return {
+          type: 'item',
+          uuid: r.uuid,
+          name: display,
+          rawText: r.code,
+          normalizedName: removeViDiacritics(display),
+          alias: [r.code, r.name].filter(Boolean),
         };
       });
       return { type, items, limit, hasMore: res.pagination.totalCount > items.length };

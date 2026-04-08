@@ -267,6 +267,36 @@ export interface BomMaterialSuggestItem {
   manufacturer: string | null;
 }
 
+/** Cây BOM con/cháu từ GET api/ProductBomTemplate/{uuid}/child-tree */
+export interface ProductBomTemplateChildTreeNode {
+  mdProductBomTemplateChildRefUuid: string;
+  mdChildProductBomTemplateUuid: string;
+  childCode: string;
+  childName: string;
+  qtyPer: number;
+  unitName: string;
+  remark?: string | null;
+  cycleSkipped: boolean;
+  children: ProductBomTemplateChildTreeNode[];
+}
+
+function normalizeChildTreeNode(raw: unknown): ProductBomTemplateChildTreeNode {
+  const r = raw !== null && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const childrenRaw = r.children ?? r.Children;
+  const children = Array.isArray(childrenRaw) ? childrenRaw.map(normalizeChildTreeNode) : [];
+  return {
+    mdProductBomTemplateChildRefUuid: String(r.mdProductBomTemplateChildRefUuid ?? r.MdProductBomTemplateChildRefUuid ?? ''),
+    mdChildProductBomTemplateUuid: String(r.mdChildProductBomTemplateUuid ?? r.MdChildProductBomTemplateUuid ?? ''),
+    childCode: String(r.childCode ?? r.ChildCode ?? ''),
+    childName: String(r.childName ?? r.ChildName ?? ''),
+    qtyPer: Number(r.qtyPer ?? r.QtyPer ?? 0),
+    unitName: String(r.unitName ?? r.UnitName ?? ''),
+    remark: (r.remark ?? r.Remark) as string | null | undefined,
+    cycleSkipped: Boolean(r.cycleSkipped ?? r.CycleSkipped),
+    children,
+  };
+}
+
 export const productBomTemplateService = {
   list: (query?: ProductBomTemplateListQuery) =>
     getList<ProductBomTemplateListRow>('api/ProductBomTemplate', query, {
@@ -284,6 +314,11 @@ export const productBomTemplateService = {
     getDetail<BomMaterialSuggestItem[]>(
       `api/ProductBomTemplate/material-suggestions?q=${encodeURIComponent(q)}&limit=${limit}${mdCompanyUuid ? `&mdCompanyUuid=${encodeURIComponent(mdCompanyUuid)}` : ''}`,
     ),
+  getChildTree: async (uuid: string): Promise<ProductBomTemplateChildTreeNode[]> => {
+    const data = await getDetail<unknown>(`api/ProductBomTemplate/${uuid}/child-tree`);
+    const arr = Array.isArray(data) ? data : [];
+    return arr.map(normalizeChildTreeNode);
+  },
 };
 
 // ============================================================

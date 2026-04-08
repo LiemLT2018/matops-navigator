@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -24,7 +24,8 @@ import type {
   BusinessPartnerDetail,
 } from '@/types/models';
 import { EdTypeFind } from '@/types/models';
-import type { BOMDetail, BOMChildRef } from '@/api/mockApi';
+import type { BOMDetail } from '@/api/mockApi';
+import type { ProductBomTemplateChildTreeNode } from '@/api/services';
 
 /** Hàng hiển thị — tương thích bảng UI */
 interface BOMMaster {
@@ -244,7 +245,10 @@ export default function BOMPage() {
   const [viewMode, setViewMode] = useState<'master' | 'list'>('list');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [bomDetails, setBomDetails] = useState<Record<string, BOMDetail[]>>({});
-  const [bomChildRefs, setBomChildRefs] = useState<Record<string, BOMChildRef[]>>({});
+  /** Cây BOM con/cháu (đệ quy) theo từng dòng expand */
+  const [bomChildTrees, setBomChildTrees] = useState<Record<string, ProductBomTemplateChildTreeNode[]>>({});
+  /** Khi sửa BOM: cây đọc từ API (read-only), null = tạo mới hoặc chưa tải */
+  const [formChildBomTree, setFormChildBomTree] = useState<ProductBomTemplateChildTreeNode[] | null>(null);
   const [preset, setPreset] = useState<DateFilter>('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -260,6 +264,8 @@ export default function BOMPage() {
 
   // Form state
   const [formProduct, setFormProduct] = useState('');
+  /** UUID sản phẩm (MdItemUuid) đã chọn; rỗng = nhập tay */
+  const [formProductUuid, setFormProductUuid] = useState('');
   /** UUID đối tác khách hàng; rỗng = không gán */
   const [formCustomerUuid, setFormCustomerUuid] = useState('');
   const [formVersion, setFormVersion] = useState('v1.0');
@@ -324,33 +330,20 @@ export default function BOMPage() {
     if (expandedId === id) { setExpandedId(null); return; }
     if (!bomDetails[id]) {
       try {
-        const [lineRes, detail] = await Promise.all([
+        const [lineRes, tree] = await Promise.all([
           productBomTemplateLineService.list({
             mdProductBomTemplateUuid: id,
             isPaging: 0,
             pageSize: 500,
             typeFind: EdTypeFind.LIST,
           }),
-          productBomTemplateService.get(id),
+          productBomTemplateService.getChildTree(id).catch(() => [] as ProductBomTemplateChildTreeNode[]),
         ]);
         setBomDetails(prev => ({
           ...prev,
           [id]: lineRes.items.map(d => mapLineToBOMDetail(normalizeBomLineFromApi(d))),
         }));
-        const raw = detail as unknown as Record<string, unknown>;
-        const childRefsRaw = (raw.childRefs ?? raw.ChildRefs) as unknown;
-        const childRefs = Array.isArray(childRefsRaw) ? (childRefsRaw as Array<Record<string, unknown>>) : [];
-        setBomChildRefs(prev => ({
-          ...prev,
-          [id]: childRefs.map((c) => ({
-            id: String(c.uuid ?? c.Uuid ?? crypto.randomUUID()),
-            bomCode: String(c.childCode ?? c.ChildCode ?? ''),
-            bomName: String(c.childName ?? c.ChildName ?? ''),
-            quantity: Number(c.qtyPer ?? c.QtyPer ?? 0),
-            unit: String(c.unitName ?? c.UnitName ?? ''),
-            note: String(c.remark ?? c.Remark ?? ''),
-          })),
-        }));
+        setBomChildTrees(prev => ({ ...prev, [id]: tree }));
       } catch {
         toast.error(t('errors.system'));
       }
@@ -361,7 +354,7 @@ export default function BOMPage() {
   /** Mở form sửa BOM (dùng từ nút Sửa hoặc click dòng ở chế độ Master). Luôn tải API — không phụ thuộc viewMode. */
   const handleMasterClick = async (row: BOMMaster) => {
     try {
-      const [detail, lineRes] = await Promise.all([
+      const [detail, lineRes, childTree] = await Promise.all([
         productBomTemplateService.get(row.id),
         productBomTemplateLineService.list({
           mdProductBomTemplateUuid: row.id,
@@ -369,11 +362,15 @@ export default function BOMPage() {
           pageSize: 500,
           typeFind: EdTypeFind.LIST,
         }),
+        productBomTemplateService.getChildTree(row.id).catch(() => [] as ProductBomTemplateChildTreeNode[]),
       ]);
       setEditingBOM(row);
       setEditingSnapshot(buildEditingSnapshot(detail, lineRes.items));
       const hdr = templateHeaderFields(detail as ProductBomTemplateListRow);
       setFormProduct(hdr.product);
+      const rawHdr = detail as unknown as Record<string, unknown>;
+      const mdItemUuid = String((rawHdr.mdItemUuid ?? rawHdr.MdItemUuid ?? '') as string);
+      setFormProductUuid(mdItemUuid);
       setFormVersion(hdr.version);
       const dRow = detail as ProductBomTemplateListRow;
       const raw = detail as unknown as Record<string, unknown>;
@@ -405,6 +402,7 @@ export default function BOMPage() {
         })
         .filter(r => r.childTemplateUuid);
       setFormChildBOMs(mappedChildRows.length > 0 ? [...mappedChildRows, emptyChildBOM()] : [emptyChildBOM()]);
+      setFormChildBomTree(childTree);
       setCommittedMaterials(lineRes.items.map(raw => {
         const d = normalizeBomLineFromApi(raw);
         return {
@@ -431,8 +429,9 @@ export default function BOMPage() {
   const handleCreate = () => {
     setEditingBOM(null);
     setEditingSnapshot(null);
-    setFormProduct(''); setFormCustomerUuid(''); setFormVersion('v1.0');
+    setFormProduct(''); setFormProductUuid(''); setFormCustomerUuid(''); setFormVersion('v1.0');
     setFormChildBOMs([emptyChildBOM()]);
+    setFormChildBomTree(null);
     setCommittedMaterials([]);
     setDraftMaterial(emptyMaterial());
     setShowForm(true);
@@ -442,6 +441,7 @@ export default function BOMPage() {
     setShowForm(false);
     setEditingBOM(null);
     setEditingSnapshot(null);
+    setFormChildBomTree(null);
   };
 
   const focusDraftMaterialName = () => {
@@ -558,7 +558,7 @@ export default function BOMPage() {
         }
         await productBomTemplateService.update(editingBOM.id, {
           mdCompanyUuid,
-          mdItemUuid: editingSnapshot.mdItemUuid || undefined,
+          mdItemUuid: formProductUuid || editingSnapshot.mdItemUuid || undefined,
           mdBusinessPartnerUuid: formCustomerUuid || null,
           code: editingSnapshot.code,
           name: formProduct.trim() || 'BOM',
@@ -588,7 +588,7 @@ export default function BOMPage() {
           delete next[editingBOM.id];
           return next;
         });
-        setBomChildRefs(prev => {
+        setBomChildTrees(prev => {
           const next = { ...prev };
           delete next[editingBOM.id];
           return next;
@@ -600,6 +600,7 @@ export default function BOMPage() {
       const body: ProductBomTemplateCreateBody = {
         mdCompanyUuid,
         mdBusinessPartnerUuid: formCustomerUuid || null,
+        mdItemUuid: formProductUuid || undefined,
         name: formProduct.trim() || 'BOM',
         versionNo: formVersion.trim() || 'v1',
         revisionNo: 0,
@@ -625,7 +626,7 @@ export default function BOMPage() {
       setEditingBOM(null);
       // New BOM created; clear caches to avoid stale expansions
       setBomDetails({});
-      setBomChildRefs({});
+      setBomChildTrees({});
       await loadData();
     } catch (err: unknown) {
       // eslint-disable-next-line no-console
@@ -819,11 +820,46 @@ export default function BOMPage() {
 
   const statuses = ['all', 'draft', 'pending', 'in_progress', 'approved', 'completed'];
 
-  const renderBOMDetailTable = (details: BOMDetail[], childRefs: BOMChildRef[]) => (
+  function BomChildTreeRows({
+    nodes,
+    depth,
+  }: {
+    nodes: ProductBomTemplateChildTreeNode[];
+    depth: number;
+  }) {
+    return (
+      <>
+        {nodes.map((n, i) => (
+          <Fragment key={`${n.mdProductBomTemplateChildRefUuid}-${depth}-${i}`}>
+            <TableRow className={n.cycleSkipped ? 'bg-amber-500/10' : undefined}>
+              <TableCell className="font-mono text-sm" style={{ paddingLeft: `${8 + depth * 18}px` }}>
+                {depth > 0 ? <span className="text-muted-foreground select-none mr-1">└</span> : null}
+                {n.childCode || '—'}
+              </TableCell>
+              <TableCell>
+                {n.childName || '—'}
+                {n.cycleSkipped ? (
+                  <span className="ml-2 text-xs text-amber-800 dark:text-amber-300">({t('bom.cycleSkipped')})</span>
+                ) : null}
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                <NumberDisplay value={n.qtyPer} />
+              </TableCell>
+              <TableCell>{n.unitName}</TableCell>
+              <TableCell className="text-sm text-muted-foreground">{n.remark ?? ''}</TableCell>
+            </TableRow>
+            {n.children.length > 0 ? <BomChildTreeRows nodes={n.children} depth={depth + 1} /> : null}
+          </Fragment>
+        ))}
+      </>
+    );
+  }
+
+  const renderBOMDetailTable = (details: BOMDetail[], childTree: ProductBomTemplateChildTreeNode[]) => (
     <div className="bg-muted/30 p-4 border-t border-border space-y-4">
-      {childRefs.length > 0 && (
+      {childTree.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold mb-2 text-foreground">{t('bom.childBOMs')} ({childRefs.length})</h4>
+          <h4 className="text-sm font-semibold mb-2 text-foreground">{t('bom.childBomTree')}</h4>
           <Table>
             <TableHeader>
               <TableRow>
@@ -835,15 +871,7 @@ export default function BOMPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {childRefs.map(c => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-mono text-sm">{c.bomCode}</TableCell>
-                  <TableCell>{c.bomName}</TableCell>
-                  <TableCell className="text-right font-mono"><NumberDisplay value={c.quantity} /></TableCell>
-                  <TableCell>{c.unit}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{c.note}</TableCell>
-                </TableRow>
-              ))}
+              <BomChildTreeRows nodes={childTree} depth={0} />
             </TableBody>
           </Table>
         </div>
@@ -894,7 +922,15 @@ export default function BOMPage() {
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="text-sm font-medium text-muted-foreground mb-1 block">{t('bom.product')}</label>
-            <Input value={formProduct} onChange={e => setFormProduct(e.target.value)} />
+            <SuggestInputText
+              value={formProduct}
+              selectedUuid={formProductUuid || undefined}
+              onChange={(v) => { setFormProduct(v); setFormProductUuid(''); }}
+              onSelect={(item) => { setFormProduct(item.name); setFormProductUuid(item.uuid); }}
+              type="item"
+              minChars={0}
+              placeholder={t('bom.product')}
+            />
           </div>
           <div>
             <label className="text-sm font-medium text-muted-foreground mb-1 block">{t('bom.customer')}</label>
@@ -970,6 +1006,32 @@ export default function BOMPage() {
             </Table>
           </div>
         </div>
+
+        {editingBOM && formChildBomTree !== null && (
+          <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
+            <h3 className="text-sm font-semibold">{t('bom.childBomTree')}</h3>
+            {formChildBomTree.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('bom.noChildBomsInTree')}</p>
+            ) : (
+              <div className="border border-border rounded-md overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('bom.bomCode')}</TableHead>
+                      <TableHead>{t('bom.bomName')}</TableHead>
+                      <TableHead className="text-right">{t('bom.quantity')}</TableHead>
+                      <TableHead>{t('bom.unit')}</TableHead>
+                      <TableHead>{t('bom.note')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <BomChildTreeRows nodes={formChildBomTree} depth={0} />
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Materials: committed rows + draft row (sequential entry) */}
         <div>
@@ -1174,7 +1236,7 @@ export default function BOMPage() {
                       <CollapsibleContent asChild>
                         <tr>
                           <td colSpan={10} className="p-0">
-                            {bomDetails[row.id] && renderBOMDetailTable(bomDetails[row.id], bomChildRefs[row.id] || [])}
+                            {bomDetails[row.id] && renderBOMDetailTable(bomDetails[row.id], bomChildTrees[row.id] || [])}
                           </td>
                         </tr>
                       </CollapsibleContent>
