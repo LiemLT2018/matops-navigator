@@ -825,7 +825,7 @@ export default function BOMPage() {
                       <SuggestInputText value={row.bomName}
                         onChange={v => handleBomNameChange(i, v)}
                         onSelect={item => handleBomSuggestSelect(i, item)}
-                        type="bom" placeholder={t('bom.bomName')} />
+                        type="bom" minChars={0} placeholder={t('bom.bomName')} />
                     </TableCell>
                     <TableCell className="p-1">
                       <Input type="number" value={row.quantity} onChange={e => { const u = [...formChildBOMs]; u[i] = { ...u[i], quantity: e.target.value }; setFormChildBOMs(u); }} className="h-8 text-sm" />

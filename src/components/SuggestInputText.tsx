@@ -218,8 +218,13 @@ export function SuggestInputText({
           onChange={e => handleChange(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => {
-            if (value.length >= minChars && suggestions.length > 0) {
-              setIsOpen(true);
+            if (value.length >= minChars) {
+              if (suggestions.length > 0) {
+                setIsOpen(true);
+              } else {
+                // Allow opening suggestion list without typing (e.g. minChars=0)
+                fetchSuggestions(value);
+              }
             }
           }}
           placeholder={placeholder}
