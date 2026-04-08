@@ -15,7 +15,7 @@ import {
   productBomTemplateLineService,
   businessPartnerService,
 } from '@/api/services';
-import { getAuthUser } from '@/lib/authStorage';
+import { getAuthUser, getAccessToken } from '@/lib/authStorage';
 import type {
   ProductBomTemplateLineListRow,
   ProductBomTemplateListRow,
