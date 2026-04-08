@@ -15,7 +15,8 @@ import {
   productBomTemplateLineService,
   businessPartnerService,
 } from '@/api/services';
-import { getAccessToken, getAuthUser } from '@/lib/authStorage';
+import { getAccessToken, getAuthUser, resolveMdCompanyUuidForApi } from '@/lib/authStorage';
+import { BUSINESS_PARTNER_LIST_TYPES_CUSTOMER } from '@/constants/businessPartner';
 import type {
   ProductBomTemplateLineListRow,
   ProductBomTemplateListRow,
@@ -280,18 +281,15 @@ export default function BOMPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const user = getAuthUser();
+      const mdCompanyUuid = resolveMdCompanyUuidForApi();
       const statusNum = bomFilterToStatus[statusFilter];
-      const partnerQuery =
-        user?.mdCompanyUuid
-          ? businessPartnerService.list({
-              mdCompanyUuid: user.mdCompanyUuid,
-              isPaging: 0,
-              pageSize: 500,
-              typeFind: EdTypeFind.LIST,
-              type: '0,1',
-            })
-          : Promise.resolve({ items: [] as BusinessPartnerDetail[], pagination: { totalCount: 0, totalPage: 1 } });
+      const partnerQuery = businessPartnerService.list({
+        ...(mdCompanyUuid ? { mdCompanyUuid } : {}),
+        isPaging: 0,
+        pageSize: 500,
+        typeFind: EdTypeFind.LIST,
+        types: [...BUSINESS_PARTNER_LIST_TYPES_CUSTOMER],
+      });
 
       const [res, bpRes] = await Promise.all([
         productBomTemplateService.list({
@@ -301,7 +299,7 @@ export default function BOMPage() {
           typeFind: EdTypeFind.DETAIL_LIST,
           keyword: search || undefined,
           status: statusNum,
-          mdCompanyUuid: user?.mdCompanyUuid,
+          ...(mdCompanyUuid ? { mdCompanyUuid } : {}),
         }),
         partnerQuery,
       ]);

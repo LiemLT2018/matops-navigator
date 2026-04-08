@@ -1,15 +1,17 @@
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, X } from 'lucide-react';
-import { Textarea } from '@/components/ui/textarea';
+import { Plus, Search, X, Edit, Trash2 } from 'lucide-react';
 import { businessPartnerService, companyService } from '@/api/services';
+import { MatOpsApiError } from '@/lib/apiClient';
+import { resolveMdCompanyUuidForApi } from '@/lib/authStorage';
 import type { BusinessPartnerDetail, BusinessPartnerCreateBody, CompanyCatalog } from '@/types/models';
+import { EdTypeFind } from '@/types/models';
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink,
   PaginationNext, PaginationPrevious,
@@ -21,12 +23,16 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import {
+  BUSINESS_PARTNER_LIST_TYPES_SUPPLIER,
+  BUSINESS_PARTNER_TYPE,
+} from '@/constants/businessPartner';
 
 const emptyForm: BusinessPartnerCreateBody = {
   mdCompanyUuid: '', code: '', name: '',
   taxCode: '', phone: '', email: '', address: '',
   contactPerson: '', paymentTerm: '', deliveryTerm: '',
-  status: 1, type: 0,
+  status: 1, type: BUSINESS_PARTNER_TYPE.SUPPLIER,
 };
 
 export default function SuppliersPage() {
@@ -39,21 +45,38 @@ export default function SuppliersPage() {
   const pageSize = 20;
 
   const [open, setOpen] = useState(false);
+  const [editingUuid, setEditingUuid] = useState<string | null>(null);
   const [form, setForm] = useState<BusinessPartnerCreateBody>({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [companies, setCompanies] = useState<CompanyCatalog[]>([]);
 
-  const load = (pg = page, kw = keyword) => {
+  const load = useCallback(async (pg: number, kw: string) => {
+    const mdCompanyUuid = resolveMdCompanyUuidForApi();
     setLoading(true);
-    businessPartnerService.list({ keyword: kw || undefined, isPaging: 1, pageIndex: pg, pageSize, typeFind: 1, type: '0,2' })
-      .then(res => {
-        setData((res.items ?? []) as BusinessPartnerDetail[]);
-        setTotalPage(res.pagination?.totalPage ?? 1);
-      })
-      .catch(() => setData([]))
-      .finally(() => setLoading(false));
-  };
+    try {
+      const res = await businessPartnerService.list({
+        keyword: kw || undefined,
+        isPaging: 1,
+        pageIndex: pg,
+        pageSize,
+        typeFind: EdTypeFind.LIST,
+        ...(mdCompanyUuid ? { mdCompanyUuid } : {}),
+        types: [...BUSINESS_PARTNER_LIST_TYPES_SUPPLIER],
+      });
+      setData((res.items ?? []) as BusinessPartnerDetail[]);
+      setTotalPage(res.pagination?.totalPage ?? 1);
+    } catch (e) {
+      setData([]);
+      if (e instanceof MatOpsApiError) {
+        toast.error(e.errorMessage || t('errors.system'));
+      } else {
+        toast.error(t('common.error'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [pageSize, t]);
 
   const loadCompanies = () => {
     companyService.list({ typeFind: 0, isPaging: 0 })
@@ -61,14 +84,16 @@ export default function SuppliersPage() {
       .catch(() => setCompanies([]));
   };
 
-  useEffect(() => { load(1); }, []);
+  useEffect(() => {
+    void load(1, '');
+  }, [load]);
 
-  const handleSearch = () => { setPage(1); load(1, keyword); };
-  const goPage = (p: number) => { setPage(p); load(p); };
+  const handleSearch = () => { setPage(1); void load(1, keyword); };
+  const goPage = (p: number) => { setPage(p); void load(p, keyword); };
 
   const setField = (key: keyof BusinessPartnerCreateBody, val: string | number) => {
     setForm(prev => ({ ...prev, [key]: val }));
-    setErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
+    setErrors(prev => { const n = { ...prev }; delete n[key as string]; return n; });
   };
 
   const validate = (): boolean => {
@@ -81,46 +106,111 @@ export default function SuppliersPage() {
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = t('common.invalidEmail');
     if (form.phone && form.phone.length > 20) e.phone = t('common.maxLength', { max: 20 });
     if (form.taxCode && form.taxCode.length > 20) e.taxCode = t('common.maxLength', { max: 20 });
+    if (editingUuid) {
+      const vt = [BUSINESS_PARTNER_TYPE.CUSTOMER, BUSINESS_PARTNER_TYPE.SUPPLIER, BUSINESS_PARTNER_TYPE.BOTH];
+      if (form.type == null || !vt.includes(form.type)) e.type = t('common.required');
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     if (!validate()) return;
+    if (!resolveMdCompanyUuidForApi()) {
+      toast.error(t('partners.needCompany'));
+      return;
+    }
     setSaving(true);
+    const uuidForUpdate = editingUuid;
     try {
-      await businessPartnerService.create({
+      const body: BusinessPartnerCreateBody = {
         ...form,
-        code: form.code.trim().toUpperCase(),
+        mdCompanyUuid: form.mdCompanyUuid,
+        code: uuidForUpdate ? form.code.trim() : form.code.trim().toUpperCase(),
         name: form.name.trim(),
-      });
-      toast.success(t('common.createSuccess'));
+        type: uuidForUpdate ? (form.type ?? BUSINESS_PARTNER_TYPE.SUPPLIER) : BUSINESS_PARTNER_TYPE.SUPPLIER,
+      };
+      if (uuidForUpdate) {
+        await businessPartnerService.update(uuidForUpdate, body);
+        toast.success(t('errors.success'));
+      } else {
+        await businessPartnerService.create({ ...body, type: BUSINESS_PARTNER_TYPE.SUPPLIER });
+        toast.success(t('common.createSuccess'));
+      }
       setOpen(false);
+      setEditingUuid(null);
       setForm({ ...emptyForm });
       setErrors({});
-      load(1);
-    } catch (err: any) {
-      const msg = err?.response?.data?.errorMessage;
-      if (msg) toast.error(msg);
-      else toast.error(t('common.error'));
+      void load(uuidForUpdate ? page : 1, keyword);
+    } catch (e) {
+      if (e instanceof MatOpsApiError) {
+        toast.error(e.errorMessage || t('errors.system'));
+      } else {
+        toast.error(t('common.error'));
+      }
     } finally {
       setSaving(false);
     }
   };
 
   const openCreate = () => {
+    setEditingUuid(null);
     setForm({ ...emptyForm });
     setErrors({});
     loadCompanies();
     setOpen(true);
   };
 
+  const openEdit = (item: BusinessPartnerDetail) => {
+    setEditingUuid(item.uuid);
+    setForm({
+      mdCompanyUuid: item.mdCompanyUuid,
+      code: item.code,
+      name: item.name,
+      type: item.type ?? BUSINESS_PARTNER_TYPE.SUPPLIER,
+      taxCode: item.taxCode ?? '',
+      phone: item.phone ?? '',
+      email: item.email ?? '',
+      address: item.address ?? '',
+      contactPerson: item.contactPerson ?? '',
+      paymentTerm: item.paymentTerm ?? '',
+      deliveryTerm: item.deliveryTerm ?? '',
+      status: item.status,
+    });
+    setErrors({});
+    loadCompanies();
+    setOpen(true);
+  };
+
+  const handleDelete = async (item: BusinessPartnerDetail) => {
+    if (!window.confirm(t('partners.deleteConfirm'))) return;
+    try {
+      await businessPartnerService.delete(item.uuid);
+      toast.success(t('errors.success'));
+      void load(page, keyword);
+    } catch (e) {
+      if (e instanceof MatOpsApiError) {
+        toast.error(e.errorMessage || t('errors.system'));
+      } else {
+        toast.error(t('common.error'));
+      }
+    }
+  };
+
+  const noCompany = !resolveMdCompanyUuidForApi();
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">{t('partners.suppliers.title')}</h1>
-        <Button size="sm" onClick={openCreate}><Plus className="mr-1 h-4 w-4" />{t('common.create')}</Button>
+        <Button size="sm" onClick={openCreate} disabled={noCompany}>
+          <Plus className="mr-1 h-4 w-4" />
+          {t('common.create')}
+        </Button>
       </div>
+      {noCompany && (
+        <p className="text-sm text-muted-foreground">{t('partners.needCompany')}</p>
+      )}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
@@ -145,15 +235,16 @@ export default function SuppliersPage() {
                 <TableHead>{t('partners.suppliers.email')}</TableHead>
                 <TableHead>{t('partners.suppliers.taxCode')}</TableHead>
                 <TableHead>{t('common.status')}</TableHead>
+                <TableHead className="w-[100px]">{t('common.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t('common.loading')}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t('common.loading')}</TableCell></TableRow>
               ) : data.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t('common.noData')}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t('common.noData')}</TableCell></TableRow>
               ) : data.map(item => (
-                <TableRow key={item.uuid} className="cursor-pointer hover:bg-muted/50">
+                <TableRow key={item.uuid} className="hover:bg-muted/50">
                   <TableCell className="font-mono text-xs">{item.code}</TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>{item.contactPerson ?? '-'}</TableCell>
@@ -161,6 +252,16 @@ export default function SuppliersPage() {
                   <TableCell>{item.email ?? '-'}</TableCell>
                   <TableCell>{item.taxCode ?? '-'}</TableCell>
                   <TableCell><StatusBadge status={item.status === 1 ? 'active' : 'inactive'} /></TableCell>
+                  <TableCell>
+                    <div className="flex gap-0.5">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title={t('common.edit')} onClick={() => openEdit(item)}>
+                        <Edit className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title={t('common.delete')} onClick={() => void handleDelete(item)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -190,14 +291,14 @@ export default function SuppliersPage() {
         </CardContent>
       </Card>
 
-      {/* Create Supplier Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditingUuid(null); }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{t('partners.suppliers.createTitle')}</DialogTitle>
+            <DialogTitle>
+              {editingUuid ? t('partners.editSupplierTitle') : t('partners.suppliers.createTitle')}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-1">
-            {/* Company */}
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">
                 {t('partners.suppliers.company')} <span className="text-destructive">*</span>
@@ -215,6 +316,26 @@ export default function SuppliersPage() {
               {errors.mdCompanyUuid && <p className="text-xs text-destructive">{errors.mdCompanyUuid}</p>}
             </div>
 
+            {editingUuid && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">{t('partners.partnerType')}</Label>
+                <Select
+                  value={String(form.type ?? BUSINESS_PARTNER_TYPE.SUPPLIER)}
+                  onValueChange={v => setField('type', Number(v))}
+                >
+                  <SelectTrigger className={errors.type ? 'border-destructive' : ''}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={String(BUSINESS_PARTNER_TYPE.CUSTOMER)}>{t('partners.bpType.customer')}</SelectItem>
+                    <SelectItem value={String(BUSINESS_PARTNER_TYPE.SUPPLIER)}>{t('partners.bpType.supplier')}</SelectItem>
+                    <SelectItem value={String(BUSINESS_PARTNER_TYPE.BOTH)}>{t('partners.bpType.both')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.type && <p className="text-xs text-destructive">{errors.type}</p>}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">
@@ -226,6 +347,7 @@ export default function SuppliersPage() {
                   placeholder="VD: ACME"
                   className={errors.code ? 'border-destructive' : ''}
                   maxLength={50}
+                  disabled={!!editingUuid}
                 />
                 {errors.code && <p className="text-xs text-destructive">{errors.code}</p>}
               </div>
@@ -308,7 +430,7 @@ export default function SuppliersPage() {
             <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
               <X className="mr-1 h-4 w-4" />{t('common.cancel')}
             </Button>
-            <Button onClick={handleCreate} disabled={saving}>
+            <Button onClick={() => void handleSave()} disabled={saving}>
               {saving ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>

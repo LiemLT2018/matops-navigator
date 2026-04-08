@@ -195,7 +195,11 @@
       "importTitle": "Import PR from Excel",
       "importDesc": "Select an Excel file with material list to import",
       "selectFile": "Select Excel File",
-      "downloadTemplate": "Download Template"
+      "downloadTemplate": "Download Template",
+      "atLeastOneLine": "At least one valid material line is required",
+      "selectUom": "Each line needs a unit (UoM) selected from suggestions and quantity greater than zero",
+      "deleteNotAvailable": "Deleting purchase requests is not supported by the API yet",
+      "onlyDraftEditable": "Only draft PRs can be edited"
     },
     "order": {
       "title": "Purchase Order",
@@ -205,10 +209,30 @@
       "unitPrice": "Unit Price",
       "totalAmount": "Total Amount",
       "date": "Date",
-      "status": "Status"
+      "status": "Status",
+      "currency": "Currency",
+      "lineList": "Line items",
+      "prLineLink": "PR line",
+      "approve": "Approve PO",
+      "cancel": "Cancel PO",
+      "createTitle": "Create purchase order",
+      "selectSupplier": "Select supplier",
+      "expectedDate": "Expected delivery",
+      "fillLine": "Pick material, unit (from suggestions), description, and valid quantity",
+      "detailTotal": "Subtotal (from line prices)"
     }
   },
   "partners": {
+    "bpType": {
+      "customer": "Customer",
+      "supplier": "Supplier",
+      "both": "Customer & Supplier"
+    },
+    "partnerType": "Partner type",
+    "deleteConfirm": "Mark this partner as inactive?",
+    "editCustomerTitle": "Edit customer",
+    "editSupplierTitle": "Edit supplier",
+    "needCompany": "Sign in and select a company to view partners.",
     "customers": {
       "title": "Customers",
       "code": "Code",
@@ -245,13 +269,39 @@
   "materials": {
     "groups": {
       "title": "Material Groups",
+      "nvlScopeHint": "Only raw material (NVL) category types are listed.",
+      "filterScopeHint": "Only categories of type 0 (raw material) and 1 (semi-finished) are listed.",
+      "categoryType": "Category type",
+      "typeRawMaterial": "Raw material (0)",
+      "typeSemiFinished": "Semi-finished (1)",
       "code": "Group Code",
       "name": "Group Name",
       "description": "Description",
-      "itemCount": "Items"
+      "itemCount": "Items",
+      "deleteConfirm": "Deactivate this group? (Status will be set to inactive.)",
+      "loadDetailFailed": "Could not load group details.",
+      "nameRequired": "Please enter a group name.",
+      "codeRequired": "Please enter a group code.",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "apiNvLNote": "The API always receives type NVL (raw material), matching NVL- code rules on the server.",
+      "apiTypeNote": "Types 0 and 1 match the backend; generated codes use the SP- (type 0) or NVL- (type 1) prefix rules on the server."
     },
     "list": {
       "title": "Material List",
+      "filterScopeHint": "Only items in categories of type 0 (raw material) or 1 (semi-finished).",
+      "createDialogTitle": "Create material",
+      "category": "Item category",
+      "selectCategory": "Select category",
+      "uom": "Unit of measure",
+      "selectUom": "Select UoM",
+      "itemType": "Item type (MD)",
+      "typeRawMaterialMd": "Raw material",
+      "typeSemiFinishedMd": "Semi-finished",
+      "standardCost": "Standard cost",
+      "lookupLoadError": "Could not load categories or units.",
+      "validationCategory": "Select an item category.",
+      "validationUom": "Select a unit of measure.",
       "code": "Material Code",
       "name": "Material Name",
       "group": "Group",
@@ -299,10 +349,31 @@
       "code": "Group Code",
       "name": "Group Name",
       "description": "Description",
-      "itemCount": "Products"
+      "itemCount": "Products",
+      "filterScopeHint": "Only finished-good categories (type 2 — FINISHED_GOOD) are listed.",
+      "deleteConfirm": "Deactivate this group? (Status will be set to inactive.)",
+      "loadDetailFailed": "Could not load group details.",
+      "nameRequired": "Please enter a group name.",
+      "codeRequired": "Please enter a group code.",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "apiTypeNote": "The API always receives type FINISHED_GOOD; codes use the TP- prefix rules on the server."
     },
     "list": {
       "title": "Product List",
+      "filterScopeHint": "Only items whose category type is 1 (semi-finished) or 2 (finished good).",
+      "createDialogTitle": "Create product",
+      "category": "Item category",
+      "selectCategory": "Select category",
+      "uom": "Unit of measure",
+      "selectUom": "Select UoM",
+      "itemType": "Item type (MD)",
+      "typeSemiFinishedMd": "Semi-finished",
+      "typeFinishedGoodMd": "Finished good",
+      "standardCost": "Standard cost",
+      "lookupLoadError": "Could not load categories or units.",
+      "validationCategory": "Select an item category.",
+      "validationUom": "Select a unit of measure.",
       "code": "Product Code",
       "name": "Product Name",
       "group": "Group",
@@ -323,6 +394,14 @@
     "materialCode": "Material Code",
     "materialName": "Material Name",
     "currentStock": "Current Stock",
+    "onHand": "On hand",
+    "reserved": "Reserved",
+    "available": "Available",
+    "warehouseCol": "Warehouse",
+    "bin": "Bin / location",
+    "warehouseFilter": "Raw material warehouse",
+    "allRmWarehouses": "All RAW_MATERIAL warehouses",
+    "emptyRm": "No RAW_MATERIAL warehouse is configured for this company.",
     "minStock": "Min Stock",
     "unit": "Unit",
     "location": "Location",
@@ -359,7 +438,13 @@
     "title": "Finished Goods",
     "productCode": "Product Code",
     "productName": "Product Name",
-    "currentStock": "Current Stock",
+    "currentStock": "Available qty",
+    "warehouse": "Warehouse",
+    "bin": "Bin / location",
+    "uom": "UoM",
+    "filterByWarehouse": "Filter by warehouse",
+    "allFgWarehouses": "All finished goods warehouses",
+    "emptyFg": "No finished goods warehouse is configured for this company.",
     "inbound": "Inbound",
     "outbound": "Outbound",
     "soRef": "SO Reference"
@@ -378,6 +463,7 @@
     "success": "Success",
     "failed": "Failed",
     "unauthorized": "Session expired. Please login again.",
+    "missingCompany": "Company context is missing. Please sign in again.",
     "undefined": "Undefined error: {{message}}"
   },
   "excelImport": {
@@ -406,7 +492,8 @@
     "name": "UoM name",
     "symbol": "Symbol",
     "description": "Description",
-    "type": "Unit scope",
+    "type": "Measure kind",
+    "measureKindFilter": "Filter by measure kind",
     "decimalPlaces": "Decimal places",
     "detailTitle": "Unit of measure detail",
     "general": "General information",
@@ -415,10 +502,12 @@
     "viewDetail": "View detail",
     "statusActive": "Active",
     "statusInactive": "Inactive",
-    "scopes": {
-      "common": "Shared",
-      "material": "Raw / material",
-      "product": "Product"
+    "measureKinds": {
+      "qty": "Quantity (QTY)",
+      "length": "Length (LENGTH)",
+      "area": "Area (AREA)",
+      "volume": "Volume (VOLUME)",
+      "weight": "Weight (WEIGHT)"
     }
   },
   "login": {

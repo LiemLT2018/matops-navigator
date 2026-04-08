@@ -195,7 +195,11 @@
       "importTitle": "Nhập PR từ Excel",
       "importDesc": "Chọn file Excel chứa danh sách vật tư cần mua",
       "selectFile": "Chọn file Excel",
-      "downloadTemplate": "Tải Excel mẫu"
+      "downloadTemplate": "Tải Excel mẫu",
+      "atLeastOneLine": "Cần ít nhất một dòng vật tư hợp lệ",
+      "selectUom": "Mỗi dòng cần chọn đơn vị tính (UoM) từ gợi ý và số lượng > 0",
+      "deleteNotAvailable": "Xóa yêu cầu mua hàng chưa được hỗ trợ trên API",
+      "onlyDraftEditable": "Chỉ PR ở trạng thái nháp mới được sửa"
     },
     "order": {
       "title": "Đơn mua hàng (Purchase Order)",
@@ -205,10 +209,30 @@
       "unitPrice": "Đơn giá",
       "totalAmount": "Tổng tiền",
       "date": "Ngày tạo",
-      "status": "Trạng thái"
+      "status": "Trạng thái",
+      "currency": "Tiền tệ",
+      "lineList": "Chi tiết dòng hàng",
+      "prLineLink": "Dòng PR",
+      "approve": "Duyệt PO",
+      "cancel": "Hủy PO",
+      "createTitle": "Tạo đơn mua hàng",
+      "selectSupplier": "Chọn nhà cung cấp",
+      "expectedDate": "Ngày giao dự kiến",
+      "fillLine": "Chọn vật tư, đơn vị tính (gợi ý), mô tả và số lượng hợp lệ",
+      "detailTotal": "Tạm tính (theo đơn giá dòng)"
     }
   },
   "partners": {
+    "bpType": {
+      "customer": "Khách hàng",
+      "supplier": "Nhà cung cấp",
+      "both": "Khách & NCC"
+    },
+    "partnerType": "Loại đối tác",
+    "deleteConfirm": "Ngưng sử dụng đối tác này trên hệ thống?",
+    "editCustomerTitle": "Sửa khách hàng",
+    "editSupplierTitle": "Sửa nhà cung cấp",
+    "needCompany": "Vui lòng đăng nhập và chọn công ty để xem đối tác.",
     "customers": {
       "title": "Khách hàng",
       "code": "Mã KH",
@@ -245,13 +269,39 @@
   "materials": {
     "groups": {
       "title": "Nhóm nguyên liệu",
+      "nvlScopeHint": "Chỉ hiển thị nhóm loại nguyên vật liệu (NVL).",
+      "filterScopeHint": "Chỉ hiển thị nhóm có loại 0 (NVL) và 1 (bán thành phẩm).",
+      "categoryType": "Loại nhóm",
+      "typeRawMaterial": "NVL (0)",
+      "typeSemiFinished": "Bán thành phẩm (1)",
       "code": "Mã nhóm",
       "name": "Tên nhóm",
       "description": "Mô tả",
-      "itemCount": "Số lượng NVL"
+      "itemCount": "Số lượng NVL",
+      "deleteConfirm": "Vô hiệu hóa nhóm này? (Trạng thái sẽ được đặt về không hoạt động.)",
+      "loadDetailFailed": "Không tải được chi tiết nhóm.",
+      "nameRequired": "Vui lòng nhập tên nhóm.",
+      "codeRequired": "Vui lòng nhập mã nhóm.",
+      "statusActive": "Hoạt động",
+      "statusInactive": "Không hoạt động",
+      "apiNvLNote": "Loại nhóm gửi lên API luôn là NVL (nguyên vật liệu), khớp quy tắc mã NVL- trên server.",
+      "apiTypeNote": "Loại 0 và 1 khớp backend; mã sinh theo tiền tố SP- (loại 0) hoặc NVL- (loại 1) trên server."
     },
     "list": {
       "title": "Danh sách nguyên liệu",
+      "filterScopeHint": "Chỉ hiển thị vật tư thuộc nhóm loại 0 (NVL) hoặc 1 (bán thành phẩm).",
+      "createDialogTitle": "Tạo nguyên liệu",
+      "category": "Nhóm hàng",
+      "selectCategory": "Chọn nhóm",
+      "uom": "Đơn vị tính",
+      "selectUom": "Chọn ĐVT",
+      "itemType": "Loại mặt hàng (MD)",
+      "typeRawMaterialMd": "NVL",
+      "typeSemiFinishedMd": "Bán thành phẩm",
+      "standardCost": "Đơn giá chuẩn",
+      "lookupLoadError": "Không tải được danh mục nhóm / ĐVT.",
+      "validationCategory": "Chọn nhóm hàng.",
+      "validationUom": "Chọn đơn vị tính.",
       "code": "Mã NVL",
       "name": "Tên nguyên liệu",
       "group": "Nhóm",
@@ -299,10 +349,31 @@
       "code": "Mã nhóm",
       "name": "Tên nhóm",
       "description": "Mô tả",
-      "itemCount": "Số sản phẩm"
+      "itemCount": "Số sản phẩm",
+      "filterScopeHint": "Chỉ hiển thị nhóm loại thành phẩm (type 2 — FINISHED_GOOD).",
+      "deleteConfirm": "Vô hiệu hóa nhóm này? (Trạng thái sẽ được đặt về không hoạt động.)",
+      "loadDetailFailed": "Không tải được chi tiết nhóm.",
+      "nameRequired": "Vui lòng nhập tên nhóm.",
+      "codeRequired": "Vui lòng nhập mã nhóm.",
+      "statusActive": "Hoạt động",
+      "statusInactive": "Không hoạt động",
+      "apiTypeNote": "Loại nhóm gửi lên API luôn là thành phẩm (FINISHED_GOOD); mã sinh theo tiền tố TP- trên server."
     },
     "list": {
       "title": "Danh sách sản phẩm",
+      "filterScopeHint": "Chỉ hiển thị mặt hàng thuộc nhóm loại 1 (bán thành phẩm) hoặc 2 (thành phẩm).",
+      "createDialogTitle": "Tạo sản phẩm",
+      "category": "Nhóm hàng",
+      "selectCategory": "Chọn nhóm",
+      "uom": "Đơn vị tính",
+      "selectUom": "Chọn ĐVT",
+      "itemType": "Loại mặt hàng (MD)",
+      "typeSemiFinishedMd": "Bán thành phẩm",
+      "typeFinishedGoodMd": "Thành phẩm",
+      "standardCost": "Đơn giá chuẩn",
+      "lookupLoadError": "Không tải được danh mục nhóm / ĐVT.",
+      "validationCategory": "Chọn nhóm hàng.",
+      "validationUom": "Chọn đơn vị tính.",
       "code": "Mã SP",
       "name": "Tên sản phẩm",
       "group": "Nhóm",
@@ -323,6 +394,14 @@
     "materialCode": "Mã vật tư",
     "materialName": "Tên vật tư",
     "currentStock": "Tồn kho",
+    "onHand": "Tồn thực tế",
+    "reserved": "Giữ chỗ",
+    "available": "Khả dụng",
+    "warehouseCol": "Kho",
+    "bin": "Vị trí (bin)",
+    "warehouseFilter": "Kho nguyên liệu",
+    "allRmWarehouses": "Tất cả kho RAW_MATERIAL",
+    "emptyRm": "Chưa cấu hình kho loại RAW_MATERIAL cho công ty này.",
     "minStock": "Tồn tối thiểu",
     "unit": "ĐVT",
     "location": "Vị trí",
@@ -359,7 +438,13 @@
     "title": "Kho thành phẩm",
     "productCode": "Mã thành phẩm",
     "productName": "Tên thành phẩm",
-    "currentStock": "Tồn kho",
+    "currentStock": "Tồn khả dụng",
+    "warehouse": "Kho",
+    "bin": "Vị trí (bin)",
+    "uom": "ĐVC",
+    "filterByWarehouse": "Lọc theo kho",
+    "allFgWarehouses": "Tất cả kho thành phẩm",
+    "emptyFg": "Chưa có kho thành phẩm cho công ty này.",
     "inbound": "Nhập kho",
     "outbound": "Xuất kho",
     "soRef": "Tham chiếu SO"
@@ -378,6 +463,7 @@
     "success": "Thành công",
     "failed": "Thất bại",
     "unauthorized": "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.",
+    "missingCompany": "Không xác định được công ty. Vui lòng đăng nhập lại.",
     "undefined": "Lỗi chưa định nghĩa: {{message}}"
   },
   "excelImport": {
@@ -406,7 +492,8 @@
     "name": "Tên ĐVT",
     "symbol": "Ký hiệu",
     "description": "Mô tả",
-    "type": "Loại đơn vị",
+    "type": "Loại đơn vị đo",
+    "measureKindFilter": "Lọc theo loại ĐVT",
     "decimalPlaces": "Số thập phân",
     "detailTitle": "Chi tiết đơn vị tính",
     "general": "Thông tin chung",
@@ -415,10 +502,12 @@
     "viewDetail": "Xem chi tiết",
     "statusActive": "Đang dùng",
     "statusInactive": "Ngưng dùng",
-    "scopes": {
-      "common": "Dùng chung",
-      "material": "Nguyên vật liệu",
-      "product": "Sản phẩm"
+    "measureKinds": {
+      "qty": "Số lượng (QTY)",
+      "length": "Chiều dài (LENGTH)",
+      "area": "Diện tích (AREA)",
+      "volume": "Thể tích (VOLUME)",
+      "weight": "Khối lượng (WEIGHT)"
     }
   },
   "login": {

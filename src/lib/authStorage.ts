@@ -38,6 +38,44 @@ export function getAuthUser(): MatopsAuthUser | null {
   }
 }
 
+/**
+ * UUID công ty để gửi query `mdCompanyUuid` (list đối tác, BOM, …).
+ * Hỗ trợ payload cũ PascalCase và fallback `allowedCompanies` khi user thiếu `mdCompanyUuid`.
+ */
+export function resolveMdCompanyUuidForApi(): string | undefined {
+  const raw = localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY);
+  if (!raw) return undefined;
+  try {
+    const o = JSON.parse(raw) as Record<string, unknown>;
+    const fromRoot =
+      (typeof o.mdCompanyUuid === 'string' && o.mdCompanyUuid.trim() !== '')
+        ? o.mdCompanyUuid.trim()
+        : (typeof o.MdCompanyUuid === 'string' && o.MdCompanyUuid.trim() !== '')
+          ? o.MdCompanyUuid.trim()
+          : '';
+    if (fromRoot) return fromRoot;
+
+    const list = (o.allowedCompanies ?? o.AllowedCompanies) as unknown;
+    if (!Array.isArray(list) || list.length === 0) return undefined;
+
+    const asRow = (x: unknown) => x as Record<string, unknown>;
+    const def = list.find((c) => {
+      const x = asRow(c);
+      return x.isDefault === true || x.IsDefault === true;
+    });
+    if (def) {
+      const x = asRow(def);
+      const u = x.uuid ?? x.Uuid;
+      if (typeof u === 'string' && u.trim() !== '') return u.trim();
+    }
+    const first = asRow(list[0]);
+    const u = first.uuid ?? first.Uuid;
+    return typeof u === 'string' && u.trim() !== '' ? u.trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Không có mốc hạn (phiên cũ) → không coi là hết hạn ở client; server vẫn có thể trả 401. */
 export function isAccessTokenExpired(): boolean {
   try {

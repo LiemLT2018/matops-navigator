@@ -20,26 +20,23 @@ import { uomService } from '@/api/services';
 import { EdTypeFind, type UomCatalog, type UomCreateBody, type UomDetailWithUsage } from '@/types/models';
 import { toast } from 'sonner';
 
-const UOM_SCOPES = [
-  { value: 0, labelKey: 'uom.scopes.common' },
-  { value: 1, labelKey: 'uom.scopes.material' },
-  { value: 2, labelKey: 'uom.scopes.product' },
-] as const;
-
-/** Chỉ dùng cho bộ lọc danh sách: Tất cả / NVL / Sản phẩm (không lọc riêng “Dùng chung”). */
-const UOM_SCOPE_FILTER = [
-  { value: 1, labelKey: 'uom.scopes.material' },
-  { value: 2, labelKey: 'uom.scopes.product' },
+/** Khớp backend <c>UomMeasureKind</c>: QTY, LENGTH, AREA, VOLUME, WEIGHT = 0…4. */
+const UOM_MEASURE_KINDS = [
+  { value: 0, labelKey: 'uom.measureKinds.qty' },
+  { value: 1, labelKey: 'uom.measureKinds.length' },
+  { value: 2, labelKey: 'uom.measureKinds.area' },
+  { value: 3, labelKey: 'uom.measureKinds.volume' },
+  { value: 4, labelKey: 'uom.measureKinds.weight' },
 ] as const;
 
 const INITIAL_FORM: UomCreateBody = { code: '', name: '', type: 0, decimalPlaces: 0, status: 1 };
 
-/** NVL → dùng chung + NVL; SP → dùng chung + SP; tất cả → không lọc theo type. */
-function typesFilterForScope(scope: string): number[] | undefined {
-  if (scope === 'all') return undefined;
-  if (scope === '1') return [0, 1];
-  if (scope === '2') return [0, 2];
-  return undefined;
+/** Một giá trị loại đo → API <c>types=[n]</c>; Tất cả → không gửi types. */
+function typesFilterForMeasureKind(kind: string): number[] | undefined {
+  if (kind === 'all') return undefined;
+  const n = Number(kind);
+  if (!Number.isInteger(n) || n < 0 || n > 4) return undefined;
+  return [n];
 }
 
 export default function UomManagementPage() {
@@ -48,7 +45,7 @@ export default function UomManagementPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterScope, setFilterScope] = useState<string>('all');
+  const [filterMeasureKind, setFilterMeasureKind] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -63,14 +60,14 @@ export default function UomManagementPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const scopeTypes = typesFilterForScope(filterScope);
+      const measureTypes = typesFilterForMeasureKind(filterMeasureKind);
       const res = await uomService.list({
         keyword: search || undefined,
         pageIndex: page,
         pageSize: 20,
         typeFind: EdTypeFind.LIST,
         ...(filterStatus !== 'all' ? { status: Number(filterStatus) } : {}),
-        ...(scopeTypes != null ? { types: scopeTypes } : {}),
+        ...(measureTypes != null ? { types: measureTypes } : {}),
       });
       setData(res.items);
       setTotalCount(res.pagination.totalCount);
@@ -80,7 +77,7 @@ export default function UomManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, page, filterStatus, filterScope]);
+  }, [search, page, filterStatus, filterMeasureKind]);
 
   useEffect(() => {
     void loadData();
@@ -161,8 +158,8 @@ export default function UomManagementPage() {
     }
   };
 
-  const scopeLabel = (type?: number) => {
-    const found = UOM_SCOPES.find((u) => u.value === type);
+  const measureKindLabel = (type?: number) => {
+    const found = UOM_MEASURE_KINDS.find((u) => u.value === type);
     return found ? t(found.labelKey) : '—';
   };
 
@@ -209,12 +206,12 @@ export default function UomManagementPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-[200px]">
-              <Label className="text-xs text-muted-foreground">{t('uom.type')}</Label>
+            <div className="w-[220px]">
+              <Label className="text-xs text-muted-foreground">{t('uom.measureKindFilter')}</Label>
               <Select
-                value={filterScope}
+                value={filterMeasureKind}
                 onValueChange={(v) => {
-                  setFilterScope(v);
+                  setFilterMeasureKind(v);
                   setPage(1);
                 }}
               >
@@ -223,7 +220,7 @@ export default function UomManagementPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t('common.all')}</SelectItem>
-                  {UOM_SCOPE_FILTER.map((s) => (
+                  {UOM_MEASURE_KINDS.map((s) => (
                     <SelectItem key={s.value} value={String(s.value)}>
                       {t(s.labelKey)}
                     </SelectItem>
@@ -263,7 +260,7 @@ export default function UomManagementPage() {
                   <TableRow key={item.uuid} className="hover:bg-muted/50">
                     <TableCell className="font-mono text-xs">{item.code}</TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>{scopeLabel(item.type)}</TableCell>
+                    <TableCell>{measureKindLabel(item.type)}</TableCell>
                     <TableCell>{item.decimalPlaces ?? 0}</TableCell>
                     <TableCell>
                       <StatusBadge status={item.status === 1 ? 'active' : 'inactive'} />
@@ -353,7 +350,7 @@ export default function UomManagementPage() {
                   ) : null}
                   <div className="flex justify-between gap-4">
                     <dt className="text-muted-foreground">{t('uom.type')}</dt>
-                    <dd>{scopeLabel(detail.type)}</dd>
+                    <dd>{measureKindLabel(detail.type)}</dd>
                   </div>
                   <div className="flex justify-between gap-4">
                     <dt className="text-muted-foreground">{t('uom.decimalPlaces')}</dt>
@@ -435,7 +432,7 @@ export default function UomManagementPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {UOM_SCOPES.map((ut) => (
+                  {UOM_MEASURE_KINDS.map((ut) => (
                     <SelectItem key={ut.value} value={String(ut.value)}>
                       {t(ut.labelKey)}
                     </SelectItem>

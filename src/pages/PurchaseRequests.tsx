@@ -13,11 +13,13 @@ import {
   purchaseRequestService,
   getTotalAvailableQtyForItem,
   productBomTemplateLineService,
+  uomService,
 } from '@/api/services';
+import { MatOpsApiError } from '@/lib/apiClient';
 import { getAuthUser } from '@/lib/authStorage';
 import type { ProductBomTemplateLineListRow } from '@/types/models';
 import { EdTypeFind } from '@/types/models';
-import type { PurchaseRequestHeader, PurchaseRequestLine } from '@/types/models';
+import type { PurchaseRequestDetailData, PurchaseRequestHeader, PurchaseRequestLine } from '@/types/models';
 import { formatCurrency } from '@/utils/formatNumber';
 import { NumberDisplay } from '@/components/NumberDisplay';
 import { Plus, Search, Upload, Download, Edit, Copy, Trash2, X, Save, ChevronDown, ChevronRight, FileSpreadsheet } from 'lucide-react';
@@ -37,6 +39,8 @@ interface FormMaterial {
   materialCode: string;
   materialName: string;
   materialUuid: string;
+  /** UoM UUID — bắt buộc khi lưu lên API (CreatePurchaseRequest / UpdatePurchaseRequest). */
+  mdUomUuid: string;
   specification: string;
   unit: string;
   quantity: string;
@@ -48,11 +52,54 @@ interface FormMaterial {
   note: string;
 }
 
+function todayLocalIsoDate(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 const emptyMaterial = (): FormMaterial => ({
   _key: crypto.randomUUID(), materialCode: '', materialName: '', materialUuid: '',
+  mdUomUuid: '',
   specification: '', unit: '', quantity: '', manufacturer: '', estimatedPrice: '',
   stockQty: null, lastSupplier: '', lastPrice: null, note: '',
 });
+
+async function detailLinesToFormMaterials(detail: PurchaseRequestDetailData): Promise<FormMaterial[]> {
+  if (!detail.lines?.length) return [emptyMaterial()];
+  const mapped = await Promise.all(
+    detail.lines.map(async (d) => {
+      let unitLabel = '';
+      if (d.mdUomUuid) {
+        try {
+          const u = await uomService.get(d.mdUomUuid);
+          unitLabel = u.name ?? u.code ?? d.mdUomUuid;
+        } catch {
+          unitLabel = `${d.mdUomUuid.slice(0, 8)}…`;
+        }
+      }
+      return {
+        _key: crypto.randomUUID(),
+        materialCode: d.mdItemUuid || '',
+        materialName: d.name,
+        materialUuid: d.mdItemUuid || '',
+        mdUomUuid: d.mdUomUuid,
+        specification: '',
+        unit: unitLabel,
+        quantity: String(d.requestedQty),
+        manufacturer: '',
+        estimatedPrice: '',
+        stockQty: null,
+        lastSupplier: '',
+        lastPrice: null,
+        note: d.remark || '',
+      } satisfies FormMaterial;
+    }),
+  );
+  return mapped;
+}
 
 const isMaterialRowComplete = (row: FormMaterial) => row.materialName && row.quantity && row.unit;
 
@@ -94,10 +141,15 @@ export default function PurchaseRequestsPage() {
       setData(res.items);
       setTotalPages(res.pagination.totalPage);
       setTotalCount(res.pagination.totalCount);
-    } catch {
+    } catch (e) {
       setData([]);
+      if (e instanceof MatOpsApiError) {
+        toast.error(e.errorMessage || t('errors.system'));
+      } else {
+        toast.error(t('errors.system'));
+      }
     }
-  }, [page, statusFilter, search]);
+  }, [page, statusFilter, search, t]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -110,6 +162,10 @@ export default function PurchaseRequestsPage() {
   };
 
   const handleEdit = async (row: PurchaseRequestHeader) => {
+    if (row.status !== 0) {
+      toast.info(t('purchasing.request.onlyDraftEditable'));
+      return;
+    }
     setEditingPR(row);
     setFormRequester('');
     setFormDepartment('');
@@ -118,25 +174,98 @@ export default function PurchaseRequestsPage() {
     setFormNote(row.remark || '');
     try {
       const detail = await purchaseRequestService.get(row.uuid);
-      setFormMaterials(detail.lines.length > 0
-        ? detail.lines.map(d => ({
-            _key: crypto.randomUUID(), materialCode: d.mdItemUuid || '', materialName: d.name,
-            materialUuid: d.mdItemUuid || '', specification: '', unit: d.mdUomUuid,
-            quantity: String(d.requestedQty), manufacturer: '',
-            estimatedPrice: '', stockQty: null,
-            lastSupplier: '', lastPrice: null, note: d.remark || '',
-          }))
-        : [emptyMaterial()]);
-    } catch {
+      setFormMaterials(await detailLinesToFormMaterials(detail));
+    } catch (e) {
       setFormMaterials([emptyMaterial()]);
+      if (e instanceof MatOpsApiError) {
+        toast.error(e.errorMessage || t('errors.system'));
+      } else {
+        toast.error(t('errors.system'));
+      }
     }
     setShowForm(true);
   };
 
+  const handleClone = async (row: PurchaseRequestHeader) => {
+    setEditingPR(null);
+    setFormRequester('');
+    setFormDepartment('');
+    setFormPriority('normal');
+    setFormBomRefs('');
+    setFormNote(row.remark || '');
+    try {
+      const detail = await purchaseRequestService.get(row.uuid);
+      setFormMaterials(await detailLinesToFormMaterials(detail));
+      setShowForm(true);
+    } catch (e) {
+      if (e instanceof MatOpsApiError) {
+        toast.error(e.errorMessage || t('errors.system'));
+      } else {
+        toast.error(t('errors.system'));
+      }
+    }
+  };
+
   const handleCloseForm = () => { setShowForm(false); setEditingPR(null); };
-  const handleSave = () => {
-    toast.success(editingPR ? t('common.edit') + ' PR ' + t('errors.success') : t('purchasing.request.createPR') + ' ' + t('errors.success'));
-    setShowForm(false); setEditingPR(null);
+
+  const handleSave = async () => {
+    const user = getAuthUser();
+    if (!user?.mdCompanyUuid) {
+      toast.error(t('errors.missingCompany'));
+      return;
+    }
+    const lines = formMaterials
+      .filter(r => r.materialName.trim() && r.quantity.trim())
+      .map(r => ({
+        mdItemUuid: r.materialUuid.trim() ? r.materialUuid.trim() : null,
+        name: r.materialName.trim(),
+        mdUomUuid: r.mdUomUuid.trim(),
+        requestedQty: Number(r.quantity),
+        neededDate: null as string | null,
+        remark: r.note.trim() ? r.note.trim() : null,
+      }));
+    if (lines.length === 0) {
+      toast.warning(t('purchasing.request.atLeastOneLine'));
+      return;
+    }
+    const invalid = lines.some(
+      l => !l.mdUomUuid || !Number.isFinite(l.requestedQty) || l.requestedQty <= 0,
+    );
+    if (invalid) {
+      toast.warning(t('purchasing.request.selectUom'));
+      return;
+    }
+    try {
+      if (editingPR) {
+        await purchaseRequestService.update(editingPR.uuid, {
+          mdDepartmentUuid: user.mdDepartmentUuid ?? null,
+          requestDate: editingPR.requestDate.slice(0, 10),
+          neededDate: null,
+          remark: formNote.trim() ? formNote.trim() : null,
+          lines,
+        });
+        toast.success(`${t('purchasing.request.editPR')} — ${t('errors.success')}`);
+      } else {
+        await purchaseRequestService.create({
+          mdCompanyUuid: user.mdCompanyUuid,
+          mdDepartmentUuid: user.mdDepartmentUuid ?? null,
+          requestDate: todayLocalIsoDate(),
+          neededDate: null,
+          remark: formNote.trim() ? formNote.trim() : null,
+          lines,
+        });
+        toast.success(`${t('purchasing.request.createPR')} — ${t('errors.success')}`);
+      }
+      setShowForm(false);
+      setEditingPR(null);
+      await loadData();
+    } catch (e) {
+      if (e instanceof MatOpsApiError) {
+        toast.error(e.errorMessage || t('errors.system'));
+      } else {
+        toast.error(t('errors.system'));
+      }
+    }
   };
 
   const handleExpand = async (uuid: string) => {
@@ -145,7 +274,11 @@ export default function PurchaseRequestsPage() {
       try {
         const detail = await purchaseRequestService.get(uuid);
         setPrItems(prev => ({ ...prev, [uuid]: detail.lines }));
-      } catch { /* handled */ }
+      } catch (e) {
+        if (e instanceof MatOpsApiError) {
+          toast.error(e.errorMessage || t('errors.system'));
+        }
+      }
     }
     setExpandedId(uuid);
   };
@@ -161,13 +294,24 @@ export default function PurchaseRequestsPage() {
       updated[index].lastSupplier = '';
       updated[index].lastPrice = null;
     }
+    if (field === 'unit') {
+      updated[index].mdUomUuid = '';
+    }
     setFormMaterials(updated);
   };
 
   const handleMatSelect = async (index: number, field: keyof FormMaterial, item: SuggestData) => {
     const updated = [...formMaterials];
     if (field === 'materialName') {
-      updated[index] = { ...updated[index], materialName: item.name, materialCode: item.uuid, materialUuid: item.uuid };
+      updated[index] = {
+        ...updated[index],
+        materialName: item.name,
+        materialCode: item.uuid,
+        materialUuid: item.uuid,
+        ...(item.mdUomUuid
+          ? { mdUomUuid: item.mdUomUuid, unit: item.unitName ?? updated[index].unit }
+          : {}),
+      };
       setFormMaterials(updated);
       const user = getAuthUser();
       try {
@@ -181,6 +325,13 @@ export default function PurchaseRequestsPage() {
         };
         setFormMaterials(u);
       } catch { /* tồn kho: bỏ qua nếu API lỗi */ }
+    } else if (field === 'unit') {
+      updated[index] = {
+        ...updated[index],
+        unit: item.name,
+        mdUomUuid: item.uuid,
+      };
+      setFormMaterials(updated);
     } else {
       updated[index] = { ...updated[index], [field]: item.name };
       setFormMaterials(updated);
@@ -227,13 +378,19 @@ export default function PurchaseRequestsPage() {
           const existing = current[existIdx];
           const newQty = Number(existing.quantity || 0) + pr.quantity;
           const price = Number(existing.estimatedPrice) || 0;
-          current[existIdx] = { ...existing, quantity: String(newQty), estimatedPrice: String(price) };
+          current[existIdx] = {
+            ...existing,
+            quantity: String(newQty),
+            estimatedPrice: String(price),
+            mdUomUuid: pr.unitUuid || existing.mdUomUuid,
+          };
         } else {
           current.push({
             _key: crypto.randomUUID(),
             materialCode: pr.materialUuid,
             materialName: pr.materialName,
             materialUuid: pr.materialUuid,
+            mdUomUuid: pr.unitUuid,
             specification: pr.specification,
             unit: pr.unit,
             quantity: String(pr.quantity),
@@ -257,7 +414,8 @@ export default function PurchaseRequestsPage() {
   const lineToImportRow = (l: ProductBomTemplateLineListRow) => ({
     materialCode: l.mdItem?.code ?? l.code ?? '',
     materialName: l.mdItem?.name ?? '',
-    materialUuid: l.mdItemUuid,
+    materialUuid: l.mdItemUuid ?? '',
+    mdUomUuid: l.mdUomUuid,
     specification: '',
     unit: l.mdUom?.name ?? l.mdUom?.code ?? '',
     quantity: Number(l.qtyPer),
@@ -288,13 +446,18 @@ export default function PurchaseRequestsPage() {
           if (existIdx >= 0) {
             const existing = current[existIdx];
             const newQty = Number(existing.quantity || 0) + bm.quantity;
-            current[existIdx] = { ...existing, quantity: String(newQty) };
+            current[existIdx] = {
+              ...existing,
+              quantity: String(newQty),
+              mdUomUuid: bm.mdUomUuid || existing.mdUomUuid,
+            };
           } else {
             current.push({
               _key: crypto.randomUUID(),
               materialCode: bm.materialCode,
               materialName: bm.materialName,
               materialUuid: bm.materialUuid,
+              mdUomUuid: bm.mdUomUuid,
               specification: bm.specification,
               unit: bm.unit,
               quantity: String(bm.quantity),
@@ -369,7 +532,7 @@ export default function PurchaseRequestsPage() {
           <h2 className="text-lg font-bold">{editingPR ? t('purchasing.request.editPR') + ': ' + editingPR.code : t('purchasing.request.createPR')}</h2>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleCloseForm}><X className="h-4 w-4 mr-1" />{t('common.cancel')}</Button>
-            <Button size="sm" onClick={handleSave}><Save className="h-4 w-4 mr-1" />{t('common.save')}</Button>
+            <Button size="sm" onClick={() => void handleSave()}><Save className="h-4 w-4 mr-1" />{t('common.save')}</Button>
           </div>
         </div>
       </CardHeader>
@@ -573,9 +736,9 @@ export default function PurchaseRequestsPage() {
                       <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{row.remark || '—'}</TableCell>
                       <TableCell>
                         <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(row)} title={t('common.edit')}><Edit className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" title={t('bom.clone')}><Copy className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title={t('common.delete')}><Trash2 className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => void handleEdit(row)} title={t('common.edit')}><Edit className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => { e.stopPropagation(); void handleClone(row); }} title={t('bom.clone')}><Copy className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={e => { e.stopPropagation(); toast.info(t('purchasing.request.deleteNotAvailable')); }} title={t('common.delete')}><Trash2 className="h-3.5 w-3.5" /></Button>
                         </div>
                       </TableCell>
                     </TableRow>

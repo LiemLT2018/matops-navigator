@@ -17,10 +17,11 @@ import {
   WarehouseDetail, WarehouseCreateBody, WarehouseListQuery,
   WarehouseBinDetail, WarehouseBinCreateBody, WarehouseBinListQuery,
   UomCatalog, UomDetail, UomDetailWithUsage, UomCreateBody, UomListQuery,
-  ItemCategoryCatalog, ItemCategoryDetail, ItemCategoryCreateBody,
+  ItemCategoryCatalog, ItemCategoryDetail, ItemCategoryCreateBody, ItemCategoryListQuery,
   ItemDetail, ItemCreateBody, ItemListQuery,
   ItemAliasDetail, ItemAliasCreateBody, ItemAliasListQuery,
-  PurchaseRequestHeader, PurchaseRequestDetailData, PurchaseRequestCreateBody,
+  PurchaseRequestHeader, PurchaseRequestDetailData, PurchaseRequestCreateBody, PurchaseRequestUpdateBody,
+  PurchaseOrderListRow, PurchaseOrderDetailData, PurchaseOrderCreateBody, PurchaseOrderUpdateBody,
   CreateItemFromLineBody,
   GoodsReceiptHeader, GoodsReceiptCreateBody,
   InventoryBalanceItem, InventoryBalanceQuery,
@@ -31,6 +32,7 @@ import {
   ProductBomTemplateCreateBody,
   ProductBomTemplateLineMutateBody,
 } from '@/types/models';
+import { normalizeInventoryBalanceItem } from '@/utils/inventoryBalanceRow';
 
 // ============================================================
 // Helper: build query params, strip undefined
@@ -153,11 +155,19 @@ export const uomService = {
 // ============================================================
 
 export const itemCategoryService = {
-  list: (query?: ListQuery) => getList<ItemCategoryCatalog>('api/ItemCategory', query),
+  list: (query?: ItemCategoryListQuery) =>
+    getList<ItemCategoryCatalog>(
+      'api/ItemCategory',
+      query,
+      query?.types?.length ? { types: query.types } : undefined,
+    ),
   get: (uuid: string) => getDetail<ItemCategoryDetail>(`api/ItemCategory/${uuid}`),
   create: (body: ItemCategoryCreateBody) => create<ItemCategoryDetail>('api/ItemCategory', body),
   update: (uuid: string, body: ItemCategoryCreateBody) => update<ItemCategoryDetail>(`api/ItemCategory/${uuid}`, body),
-  delete: (uuid: string) => remove(`api/ItemCategory/${uuid}`),
+  /** Backend trả `data: true` (soft delete — set status = 0). */
+  delete: async (uuid: string): Promise<void> => {
+    await apiClient.delete(`api/ItemCategory/${uuid}`);
+  },
 };
 
 // ============================================================
@@ -165,7 +175,11 @@ export const itemCategoryService = {
 // ============================================================
 
 export const itemService = {
-  list: (query?: ItemListQuery) => getList<ItemDetail>('api/Item', query, { mdCompanyUuid: query?.mdCompanyUuid }),
+  list: (query?: ItemListQuery) =>
+    getList<ItemDetail>('api/Item', query, {
+      mdCompanyUuid: query?.mdCompanyUuid,
+      ...(query?.categoryTypes?.length ? { categoryTypes: query.categoryTypes } : {}),
+    }),
   get: (uuid: string) => getDetail<ItemDetail>(`api/Item/${uuid}`),
   create: (body: ItemCreateBody) => create<ItemDetail>('api/Item', body),
   update: (uuid: string, body: ItemCreateBody) => update<ItemDetail>(`api/Item/${uuid}`, body),
@@ -196,7 +210,7 @@ export const purchaseRequestService = {
   list: (query?: ListQuery) => getList<PurchaseRequestHeader>('api/PurchaseRequest', query),
   get: (uuid: string) => getDetail<PurchaseRequestDetailData>(`api/PurchaseRequest/${uuid}`),
   create: (body: PurchaseRequestCreateBody) => create<PurchaseRequestDetailData>('api/PurchaseRequest', body),
-  update: (uuid: string, body: PurchaseRequestCreateBody) => update<PurchaseRequestDetailData>(`api/PurchaseRequest/${uuid}`, body),
+  update: (uuid: string, body: PurchaseRequestUpdateBody) => update<PurchaseRequestDetailData>(`api/PurchaseRequest/${uuid}`, body),
   delete: (uuid: string) => remove(`api/PurchaseRequest/${uuid}`),
   submit: async (uuid: string) => {
     const res = await apiClient.post(`api/PurchaseRequest/${uuid}/submit`);
@@ -205,6 +219,25 @@ export const purchaseRequestService = {
   createItemFromLine: async (lineUuid: string, body: CreateItemFromLineBody) => {
     const res = await apiClient.post(`api/PurchaseRequest/lines/${lineUuid}/create-item`, body);
     return res.data as ItemDetail;
+  },
+};
+
+// ============================================================
+// PurchaseOrder — api/PurchaseOrder
+// ============================================================
+
+export const purchaseOrderService = {
+  list: (query?: ListQuery) => getList<PurchaseOrderListRow>('api/PurchaseOrder', query),
+  get: (uuid: string) => getDetail<PurchaseOrderDetailData>(`api/PurchaseOrder/${uuid}`),
+  create: (body: PurchaseOrderCreateBody) => create<PurchaseOrderDetailData>('api/PurchaseOrder', body),
+  update: (uuid: string, body: PurchaseOrderUpdateBody) => update<PurchaseOrderDetailData>(`api/PurchaseOrder/${uuid}`, body),
+  approve: async (uuid: string) => {
+    const res = await apiClient.post(`api/PurchaseOrder/${uuid}/approve`);
+    return res.data as PurchaseOrderDetailData;
+  },
+  cancel: async (uuid: string) => {
+    const res = await apiClient.post(`api/PurchaseOrder/${uuid}/cancel`);
+    return res.data as PurchaseOrderDetailData;
   },
 };
 
@@ -227,10 +260,22 @@ export const goodsReceiptService = {
 // ============================================================
 
 export const inventoryBalanceService = {
-  list: (query?: InventoryBalanceQuery) => getList<InventoryBalanceItem>(
-    'api/InventoryBalance', query,
-    { mdCompanyUuid: query?.mdCompanyUuid, mdWarehouseUuid: query?.mdWarehouseUuid, mdItemUuid: query?.mdItemUuid },
-  ),
+  list: async (query?: InventoryBalanceQuery): Promise<ApiListData<InventoryBalanceItem>> => {
+    const res = await apiClient.get('api/InventoryBalance', {
+      params: listParams(query, {
+        mdCompanyUuid: query?.mdCompanyUuid,
+        mdWarehouseUuid: query?.mdWarehouseUuid,
+        mdItemUuid: query?.mdItemUuid,
+        ...(query?.warehouseTypes?.length ? { warehouseTypes: query.warehouseTypes } : {}),
+      }),
+      paramsSerializer: { serialize: serializePageParams },
+    });
+    const n = normalizeApiListData<InventoryBalanceItem>(res.data);
+    return {
+      ...n,
+      items: n.items.map((row) => normalizeInventoryBalanceItem(row)),
+    };
+  },
   stocktakeAdjustment: async (body: StocktakeAdjustmentBody) => {
     const res = await apiClient.post('api/InventoryBalance/stocktake-adjustment', body);
     return res.data as StocktakeAdjustmentResult;
@@ -356,8 +401,12 @@ export const companyService = {
 // ============================================================
 
 export const businessPartnerService = {
-  list: (query?: ListQuery & { mdCompanyUuid?: string; type?: string }) =>
-    getList<BusinessPartnerDetail>('api/BusinessPartner', query, { mdCompanyUuid: query?.mdCompanyUuid, type: query?.type }),
+  list: (query?: ListQuery & { mdCompanyUuid?: string; type?: string; types?: string[] }) =>
+    getList<BusinessPartnerDetail>('api/BusinessPartner', query, {
+      mdCompanyUuid: query?.mdCompanyUuid,
+      ...(query?.type != null && query.type !== '' ? { type: query.type } : {}),
+      ...(query?.types?.length ? { types: query.types } : {}),
+    }),
   get: (uuid: string) => getDetail<BusinessPartnerDetail>(`api/BusinessPartner/${uuid}`),
   create: (body: BusinessPartnerCreateBody) => create<BusinessPartnerDetail>('api/BusinessPartner', body),
   update: (uuid: string, body: BusinessPartnerCreateBody) => update<BusinessPartnerDetail>(`api/BusinessPartner/${uuid}`, body),
@@ -386,7 +435,11 @@ export const warehouseService = {
     getList<WarehouseDetail>('api/Warehouse', query, {
       mdCompanyUuid: query?.mdCompanyUuid,
       mdPlantUuid: query?.mdPlantUuid,
-      type: query?.type,
+      ...(query?.types?.length
+        ? { types: query.types.map((t) => String(t)) }
+        : query?.type !== undefined && query?.type !== null && query.type !== ''
+          ? { types: [String(query.type)] }
+          : {}),
     }),
   get: (uuid: string) => getDetail<WarehouseDetail>(`api/Warehouse/${uuid}`),
   create: (body: WarehouseCreateBody) => create<WarehouseDetail>('api/Warehouse', body),
