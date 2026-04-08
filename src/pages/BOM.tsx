@@ -515,35 +515,17 @@ export default function BOMPage() {
           revisionNo: editingSnapshot.revisionNo,
           status: editingSnapshot.status,
           childRefs,
-        });
-
-        const templateUuid = editingBOM.id;
-        const keptLineUuids = new Set(rows.map(r => r.lineUuid).filter(Boolean) as string[]);
-        for (const uid of editingSnapshot.initialLineUuids) {
-          if (!keptLineUuids.has(uid)) {
-            await productBomTemplateLineService.delete(uid);
-          }
-        }
-
-        for (let i = 0; i < rows.length; i++) {
-          const row = rows[i];
-          const lineNo = i + 1;
-          const lineBody: ProductBomTemplateLineMutateBody = {
-            mdProductBomTemplateUuid: templateUuid,
+          lines: rows.map((row, i) => ({
+            uuid: row.lineUuid || undefined,
             mdItemUuid: row.materialCode || undefined,
             name: row.materialCode ? undefined : row.materialName.trim(),
             mdUomUuid: row.mdUomUuid,
-            lineNo,
             qtyPer: Number(row.quantity),
             lossRate: 0,
+            lineNo: i + 1,
             remark: row.note || undefined,
-          };
-          if (row.lineUuid) {
-            await productBomTemplateLineService.update(row.lineUuid, lineBody);
-          } else {
-            await productBomTemplateLineService.create(lineBody);
-          }
-        }
+          })),
+        });
 
         toast.success(`${t('bom.editBOM')} ${t('errors.success')}`);
         setShowForm(false);

@@ -477,6 +477,8 @@ export interface ProductBomTemplateLineListRow {
 
 /** POST api/ProductBomTemplate — dòng BOM (khớp CreateProductBomTemplateLineInput). */
 export interface ProductBomTemplateCreateLineBody {
+  /** UUID line (only used for update to upsert/delete) */
+  uuid?: string | null;
   mdItemUuid?: string | null;
   mdItemAliasUuid?: string | null;
   name?: string | null;
