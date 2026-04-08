@@ -478,7 +478,12 @@ export default function BOMPage() {
         unitName: r.unit || 'Bộ',
         remark: r.note || undefined,
       }));
-    const rows = committedMaterials.filter(r => r.materialName || r.quantity);
+    // If the user filled the draft row but forgot to click "Add to BOM",
+    // include it automatically so "Save" matches user expectations.
+    const effectiveMaterials = isMaterialRowComplete(draftMaterial)
+      ? [...committedMaterials, { ...draftMaterial }]
+      : [...committedMaterials];
+    const rows = effectiveMaterials.filter(r => r.materialName || r.quantity);
     if (rows.length === 0) {
       if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
