@@ -1059,7 +1059,7 @@ export default function BOMPage() {
                       <SuggestInputWithQuickAdd value={row.materialName} selectedUuid={row.materialCode}
                         onChange={v => handleCommittedMatFieldChange(i, 'materialName', v)}
                         onSelect={item => handleCommittedMatSuggestSelect(i, 'materialName', item)}
-                        type="material" quickAddType="material" placeholder={t('bom.materialName')} />
+                        type="material" quickAddType="material" placeholder={t('bom.materialName')} minChars={0} />
                     </TableCell>
                     <TableCell className="p-1">
                       <SuggestInputWithQuickAdd value={row.specification}
@@ -1101,7 +1101,7 @@ export default function BOMPage() {
                     <SuggestInputWithQuickAdd id="bom-draft-material-name" value={draftMaterial.materialName} selectedUuid={draftMaterial.materialCode}
                       onChange={v => handleDraftMatFieldChange('materialName', v)}
                       onSelect={item => handleDraftMatSuggestSelect('materialName', item)}
-                      type="material" quickAddType="material" placeholder={t('bom.materialName')} />
+                      type="material" quickAddType="material" placeholder={t('bom.materialName')} minChars={0} />
                   </TableCell>
                   <TableCell className="p-1">
                     <SuggestInputWithQuickAdd value={draftMaterial.specification}

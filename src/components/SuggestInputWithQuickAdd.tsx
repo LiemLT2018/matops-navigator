@@ -21,6 +21,7 @@ interface SuggestInputWithQuickAddProps {
   disabled?: boolean;
   className?: string;
   id?: string;
+  minChars?: number;
 }
 
 export function SuggestInputWithQuickAdd({
@@ -36,6 +37,7 @@ export function SuggestInputWithQuickAdd({
   disabled,
   className,
   id,
+  minChars,
 }: SuggestInputWithQuickAddProps) {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
 
@@ -55,6 +57,7 @@ export function SuggestInputWithQuickAdd({
           type={type}
           placeholder={placeholder}
           disabled={disabled}
+          minChars={minChars}
           className={cn(
             hasUuid && 'border-green-500/50 bg-green-500/5',
             !hasUuid && hasValue && 'border-yellow-500/50 bg-yellow-500/5',
