@@ -37,6 +37,7 @@ export function SuggestInputWithQuickAdd({
   disabled,
   className,
   id,
+  minChars,
 }: SuggestInputWithQuickAddProps) {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
 
