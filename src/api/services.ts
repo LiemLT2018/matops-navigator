@@ -437,7 +437,7 @@ export const warehouseService = {
       mdPlantUuid: query?.mdPlantUuid,
       ...(query?.types?.length
         ? { types: query.types.map((t) => String(t)) }
-        : query?.type !== undefined && query?.type !== null && query.type !== ''
+        : query?.type !== undefined && query?.type !== null
           ? { types: [String(query.type)] }
           : {}),
     }),
