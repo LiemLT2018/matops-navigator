@@ -108,7 +108,7 @@ export default function CustomersPage() {
     if (form.taxCode && form.taxCode.length > 20) e.taxCode = t('common.maxLength', { max: 20 });
     if (editingUuid) {
       const vt = [BUSINESS_PARTNER_TYPE.CUSTOMER, BUSINESS_PARTNER_TYPE.SUPPLIER, BUSINESS_PARTNER_TYPE.BOTH];
-      if (form.type == null || !vt.includes(form.type)) e.type = t('common.required');
+      if (form.type == null || !vt.includes(form.type as typeof vt[number])) e.type = t('common.required');
     }
     setErrors(e);
     return Object.keys(e).length === 0;
