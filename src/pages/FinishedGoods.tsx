@@ -44,7 +44,7 @@ export default function FinishedGoodsPage() {
           pageSize: 200,
           typeFind: EdTypeFind.CATALOG,
           ...(mdCompanyUuid ? { mdCompanyUuid } : {}),
-          types: [String(EdWarehouseType.FINISHED_GOOD)],
+          types: [String(EdWarehouseType.FINISHED_GOOD) as `${EdWarehouseType}`],
         });
         if (!cancelled) setFgWarehouses((res.items ?? []) as WarehouseCatalog[]);
       } catch (e) {
