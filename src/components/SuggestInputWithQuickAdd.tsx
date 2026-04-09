@@ -57,6 +57,7 @@ export function SuggestInputWithQuickAdd({
           type={type}
           placeholder={placeholder}
           disabled={disabled}
+          minChars={minChars}
           className={cn(
             hasUuid && 'border-green-500/50 bg-green-500/5',
             !hasUuid && hasValue && 'border-yellow-500/50 bg-yellow-500/5',
