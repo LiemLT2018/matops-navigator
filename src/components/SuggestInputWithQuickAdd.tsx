@@ -21,6 +21,7 @@ interface SuggestInputWithQuickAddProps {
   disabled?: boolean;
   className?: string;
   id?: string;
+  minChars?: number;
 }
 
 export function SuggestInputWithQuickAdd({
