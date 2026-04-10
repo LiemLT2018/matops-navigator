@@ -84,6 +84,7 @@ function normalizeBomLineFromApi(raw: unknown): ProductBomTemplateLineListRow {
       uuid: '',
       mdProductBomTemplateUuid: '',
       mdItemUuid: null,
+      mdSpecificationUuid: null,
       mdUomUuid: '',
       lineNo: 0,
       qtyPer: 0,
@@ -91,6 +92,7 @@ function normalizeBomLineFromApi(raw: unknown): ProductBomTemplateLineListRow {
       code: null,
       remark: null,
       mdItem: null,
+      mdSpecification: null,
       mdUom: null,
     };
   }
@@ -109,12 +111,24 @@ function normalizeBomLineFromApi(raw: unknown): ProductBomTemplateLineListRow {
       status: o.status !== undefined ? Number(o.status) : o.Status !== undefined ? Number(o.Status) : undefined,
     };
   };
+  const normSpecification = (i: unknown): { uuid: string; name: string } | null => {
+    if (!i || typeof i !== 'object') return null;
+    const o = i as Record<string, unknown>;
+    const uuid = String(o.uuid ?? o.Uuid ?? '');
+    if (!uuid) return null;
+    return {
+      uuid,
+      name: String(o.name ?? o.Name ?? ''),
+    };
+  };
   const mUuid = r.mdItemUuid ?? r.MdItemUuid;
+  const sUuid = r.mdSpecificationUuid ?? r.MdSpecificationUuid;
   return {
     uuid: String(r.uuid ?? r.Uuid ?? ''),
     mdProductBomTemplateUuid: String(r.mdProductBomTemplateUuid ?? r.MdProductBomTemplateUuid ?? ''),
     mdItemUuid: mUuid === null || mUuid === undefined ? null : String(mUuid),
     mdItemAliasUuid: (r.mdItemAliasUuid ?? r.MdItemAliasUuid) as string | null | undefined,
+    mdSpecificationUuid: sUuid === null || sUuid === undefined ? null : String(sUuid),
     mdUomUuid: String(r.mdUomUuid ?? r.MdUomUuid ?? ''),
     lineNo: Number(r.lineNo ?? r.LineNo ?? 0),
     qtyPer: Number(r.qtyPer ?? r.QtyPer ?? 0),
@@ -123,6 +137,7 @@ function normalizeBomLineFromApi(raw: unknown): ProductBomTemplateLineListRow {
     remark: (r.remark ?? r.Remark ?? null) as string | null,
     mdItem: normRef(r.mdItem ?? r.MdItem),
     mdItemAlias: normAlias(r.mdItemAlias ?? r.MdItemAlias),
+    mdSpecification: normSpecification(r.mdSpecification ?? r.MdSpecification),
     mdUom: normRef(r.mdUom ?? r.MdUom),
   };
 }
@@ -134,7 +149,7 @@ function mapLineToBOMDetail(line: ProductBomTemplateLineListRow): BOMDetail {
     level: 1,
     materialCode: line.mdItem?.code ?? line.code ?? '',
     materialName: line.mdItem?.name ?? line.mdItemAlias?.name ?? line.remark?.trim() ?? '',
-    specification: '',
+    specification: line.mdSpecification?.name ?? '',
     unit: line.mdUom?.name ?? line.mdUom?.code ?? '',
     quantity: Number.isFinite(q) ? q : 0,
     note: line.remark ?? '',
@@ -412,8 +427,8 @@ export default function BOMPage() {
           itemCode: d.mdItem?.code ?? '',
           materialCode: d.mdItemUuid ?? '',
           materialName: d.mdItem?.name ?? d.mdItemAlias?.name ?? '',
-          specification: '',
-          mdSpecificationUuid: '',
+          specification: d.mdSpecification?.name ?? '',
+          mdSpecificationUuid: d.mdSpecificationUuid ?? '',
           unit: d.mdUom?.name ?? d.mdUom?.code ?? '',
           mdUomUuid: d.mdUomUuid ?? '',
           quantity: String(d.qtyPer ?? ''),
@@ -571,6 +586,7 @@ export default function BOMPage() {
           lines: rows.map((row, i) => ({
             uuid: row.lineUuid || undefined,
             mdItemUuid: row.materialCode || undefined,
+            mdSpecificationUuid: row.mdSpecificationUuid || undefined,
             name: row.materialCode ? undefined : row.materialName.trim(),
             mdUomUuid: row.mdUomUuid,
             qtyPer: Number(row.quantity),
@@ -610,6 +626,7 @@ export default function BOMPage() {
         childRefs,
         lines: rows.map((row, i) => ({
           mdItemUuid: row.materialCode || undefined,
+          mdSpecificationUuid: row.mdSpecificationUuid || undefined,
           name: row.materialCode ? undefined : row.materialName.trim(),
           mdUomUuid: row.mdUomUuid,
           qtyPer: Number(row.quantity),
@@ -702,6 +719,7 @@ export default function BOMPage() {
         materialName: item.name,
         materialCode: item.uuid,
         specification: item.specification ?? prev.specification,
+        mdSpecificationUuid: '',
         unit: item.unitName ?? prev.unit,
         mdUomUuid: item.mdUomUuid ?? prev.mdUomUuid,
         manufacturer: item.manufacturer ?? prev.manufacturer,
@@ -729,6 +747,7 @@ export default function BOMPage() {
           materialName: item.name,
           materialCode: item.uuid,
           specification: item.specification ?? u[index].specification,
+          mdSpecificationUuid: '',
           unit: item.unitName ?? u[index].unit,
           mdUomUuid: item.mdUomUuid ?? u[index].mdUomUuid,
           manufacturer: item.manufacturer ?? u[index].manufacturer,

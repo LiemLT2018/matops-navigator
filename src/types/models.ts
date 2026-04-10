@@ -644,6 +644,7 @@ export interface ProductBomTemplateLineListRow {
   mdProductBomTemplateUuid: string;
   mdItemUuid: string | null;
   mdItemAliasUuid?: string | null;
+  mdSpecificationUuid?: string | null;
   mdUomUuid: string;
   lineNo: number;
   qtyPer: number;
@@ -652,6 +653,7 @@ export interface ProductBomTemplateLineListRow {
   remark: string | null;
   mdItem: { code: string; name: string } | null;
   mdItemAlias?: { uuid: string; name: string; status?: number } | null;
+  mdSpecification?: { uuid: string; name: string } | null;
   mdUom: { code: string; name: string } | null;
 }
 
@@ -661,6 +663,7 @@ export interface ProductBomTemplateCreateLineBody {
   uuid?: string | null;
   mdItemUuid?: string | null;
   mdItemAliasUuid?: string | null;
+  mdSpecificationUuid?: string | null;
   name?: string | null;
   mdUomUuid: string;
   lineNo?: number;
@@ -708,6 +711,7 @@ export interface ProductBomTemplateLineMutateBody {
   mdProductBomTemplateUuid: string;
   mdItemUuid?: string | null;
   mdItemAliasUuid?: string | null;
+  mdSpecificationUuid?: string | null;
   name?: string | null;
   mdUomUuid: string;
   lineNo: number;
