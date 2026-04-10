@@ -31,6 +31,7 @@ import type { DatePresetKey } from '@/types/api';
 import { toast } from 'sonner';
 import { ExcelImportPreview } from '@/components/ExcelImportPreview';
 import type { ParsedRow } from '@/utils/excelParser';
+import { appendItemSearchPhraseFromSuggest } from '@/utils/appendItemSearchPhrase';
 
 type DateFilter = DatePresetKey | 'all';
 
@@ -300,9 +301,10 @@ export default function PurchaseRequestsPage() {
     setFormMaterials(updated);
   };
 
-  const handleMatSelect = async (index: number, field: keyof FormMaterial, item: SuggestData) => {
+  const handleMatSelect = async (index: number, field: keyof FormMaterial, item: SuggestData, typedQuery?: string) => {
     const updated = [...formMaterials];
     if (field === 'materialName') {
+      appendItemSearchPhraseFromSuggest(item.uuid, typedQuery);
       updated[index] = {
         ...updated[index],
         materialName: item.name,
@@ -610,7 +612,7 @@ export default function PurchaseRequestsPage() {
                     <TableCell className="p-1">
                       <SuggestInputWithQuickAdd value={row.materialName} selectedUuid={row.materialUuid}
                         onChange={v => handleMatFieldChange(i, 'materialName', v)}
-                        onSelect={item => handleMatSelect(i, 'materialName', item)}
+                        onSelect={(item, typed) => handleMatSelect(i, 'materialName', item, typed)}
                         type="material" quickAddType="material" placeholder={t('bom.materialName')} />
                     </TableCell>
                     <TableCell className="p-1">

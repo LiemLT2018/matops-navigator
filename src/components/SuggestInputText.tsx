@@ -8,7 +8,8 @@ interface SuggestInputTextProps {
   value: string;
   selectedUuid?: string;
   onChange: (value: string) => void;
-  onSelect: (item: SuggestData) => void;
+  /** `typedQuery` = text trong ô ngay trước khi chọn gợi ý (để lưu SearchText / phân tích). */
+  onSelect: (item: SuggestData, typedQuery?: string) => void;
   type: string;
   id?: string;
   placeholder?: string;
@@ -143,12 +144,16 @@ export function SuggestInputText({
     }, debounceMs);
   }, [onChange, minChars, debounceMs, fetchSuggestions, tryLocalFilter]);
 
-  const selectItem = useCallback((item: SuggestData) => {
-    onChange(item.name);
-    onSelect(item);
-    setSuggestions([]);
-    setIsOpen(false);
-  }, [onChange, onSelect]);
+  const selectItem = useCallback(
+    (item: SuggestData) => {
+      const typedQuery = value;
+      onChange(item.name);
+      onSelect(item, typedQuery);
+      setSuggestions([]);
+      setIsOpen(false);
+    },
+    [onChange, onSelect, value],
+  );
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!isOpen || suggestions.length === 0) {

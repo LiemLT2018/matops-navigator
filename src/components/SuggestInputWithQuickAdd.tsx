@@ -11,7 +11,7 @@ interface SuggestInputWithQuickAddProps {
   value: string;
   selectedUuid?: string;
   onChange: (value: string) => void;
-  onSelect: (item: SuggestData) => void;
+  onSelect: (item: SuggestData, typedQuery?: string) => void;
   onQuickAdded?: (item: DictItem) => void;
   type: string;
   quickAddType: QuickAddType;

@@ -30,6 +30,7 @@ import { Plus, Search, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { SuggestInputWithQuickAdd } from '@/components/SuggestInputWithQuickAdd';
 import type { SuggestData } from '@/api/suggestApi';
+import { appendItemSearchPhraseFromSuggest } from '@/utils/appendItemSearchPhrase';
 
 function todayLocalIsoDate(): string {
   const d = new Date();
@@ -522,7 +523,8 @@ export default function PurchaseOrdersPage() {
                   materialUuid: '',
                   ...(v === '' ? { mdUomUuid: '', unit: '' } : {}),
                 }))}
-                onSelect={(item: SuggestData) => {
+                onSelect={(item: SuggestData, typed?: string) => {
+                  appendItemSearchPhraseFromSuggest(item.uuid, typed);
                   setCreateLine((prev) => ({
                     ...prev,
                     materialName: item.name,

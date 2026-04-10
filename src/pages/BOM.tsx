@@ -178,6 +178,7 @@ import { SuggestInputWithQuickAdd } from '@/components/SuggestInputWithQuickAdd'
 import type { SuggestData } from '@/api/suggestApi';
 import { ExcelImportPreview } from '@/components/ExcelImportPreview';
 import type { ParsedRow } from '@/utils/excelParser';
+import { appendItemSearchPhraseFromSuggest } from '@/utils/appendItemSearchPhrase';
 import { MatOpsApiError, ApiEnvelopeError } from '@/lib/apiClient';
 
 type DateFilter = DatePresetKey | 'all';
@@ -684,8 +685,9 @@ export default function BOMPage() {
     });
   };
 
-  const handleDraftMatSuggestSelect = (field: keyof FormMaterial, item: SuggestData) => {
+  const handleDraftMatSuggestSelect = (field: keyof FormMaterial, item: SuggestData, typedQuery?: string) => {
     if (field === 'materialName') {
+      appendItemSearchPhraseFromSuggest(item.uuid, typedQuery);
       setDraftMaterial(prev => ({
         ...prev,
         materialName: item.name,
@@ -704,8 +706,9 @@ export default function BOMPage() {
     setDraftMaterial(prev => ({ ...prev, [field]: item.name }));
   };
 
-  const handleCommittedMatSuggestSelect = (index: number, field: keyof FormMaterial, item: SuggestData) => {
+  const handleCommittedMatSuggestSelect = (index: number, field: keyof FormMaterial, item: SuggestData, typedQuery?: string) => {
     if (field === 'materialName') {
+      appendItemSearchPhraseFromSuggest(item.uuid, typedQuery);
       setCommittedMaterials(prev => {
         const u = [...prev];
         u[index] = {
@@ -924,7 +927,11 @@ export default function BOMPage() {
               value={formProduct}
               selectedUuid={formProductUuid || undefined}
               onChange={(v) => { setFormProduct(v); setFormProductUuid(''); }}
-              onSelect={(item) => { setFormProduct(item.name); setFormProductUuid(item.uuid); }}
+              onSelect={(item, typed) => {
+                setFormProduct(item.name);
+                setFormProductUuid(item.uuid);
+                appendItemSearchPhraseFromSuggest(item.uuid, typed);
+              }}
               type="item"
               minChars={2}
               placeholder={t('bom.product')}
@@ -1058,7 +1065,7 @@ export default function BOMPage() {
                     <TableCell className="p-1">
                       <SuggestInputWithQuickAdd value={row.materialName} selectedUuid={row.materialCode}
                         onChange={v => handleCommittedMatFieldChange(i, 'materialName', v)}
-                        onSelect={item => handleCommittedMatSuggestSelect(i, 'materialName', item)}
+                        onSelect={(item, typed) => handleCommittedMatSuggestSelect(i, 'materialName', item, typed)}
                         type="material" quickAddType="material" placeholder={t('bom.materialName')} minChars={2} />
                     </TableCell>
                     <TableCell className="p-1">
@@ -1100,7 +1107,7 @@ export default function BOMPage() {
                   <TableCell className="p-1">
                     <SuggestInputWithQuickAdd id="bom-draft-material-name" value={draftMaterial.materialName} selectedUuid={draftMaterial.materialCode}
                       onChange={v => handleDraftMatFieldChange('materialName', v)}
-                      onSelect={item => handleDraftMatSuggestSelect('materialName', item)}
+                      onSelect={(item, typed) => handleDraftMatSuggestSelect('materialName', item, typed)}
                       type="material" quickAddType="material" placeholder={t('bom.materialName')} minChars={2} />
                   </TableCell>
                   <TableCell className="p-1">

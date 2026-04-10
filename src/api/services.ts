@@ -194,6 +194,9 @@ export const itemService = {
   create: (body: ItemCreateBody) => create<ItemDetail>('api/Item', body),
   update: (uuid: string, body: ItemCreateBody) => update<ItemDetail>(`api/Item/${uuid}`, body),
   delete: (uuid: string) => remove(`api/Item/${uuid}`),
+  /** Nối thêm cụm từ tìm kiếm (chuỗi user gõ) vào SearchText của vật tư/sản phẩm — phân tách bằng dấu phẩy, server bỏ trùng. */
+  appendSearchPhrase: (uuid: string, phrase: string) =>
+    create<ItemDetail>(`api/Item/${uuid}/append-search-phrase`, { phrase }),
 };
 
 // ============================================================

@@ -417,6 +417,15 @@ export function parseRow(
   return row;
 }
 
+/** Một dòng mô tả vật tư dạng tự do — cùng engine regex + từ điển với import Excel BOM. */
+export async function parseCompositeMaterialLine(text: string, rowNum = 1): Promise<ParsedRow> {
+  const [rules, dictionary] = await Promise.all([
+    getParseRules('bom_import'),
+    getImportDictionary(),
+  ]);
+  return parseRow(text.trim(), rules, dictionary, rowNum);
+}
+
 // ── Parse all rows ──
 export async function parseExcelRows(
   rows: string[],
