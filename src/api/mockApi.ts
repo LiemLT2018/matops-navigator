@@ -1,4 +1,7 @@
 import type { PagingResponse, BaseResponse } from '@/types/api';
+import type { BOMDetail } from '@/types/bom';
+
+export type { BOMDetail } from '@/types/bom';
 
 // Dashboard mock
 export interface DashboardKPI {
@@ -87,11 +90,6 @@ export async function getProductOrders(): Promise<PagingResponse<ProductOrder[]>
 export interface BOMMaster {
   id: string; code: string; product: string; customer: string; version: string;
   status: string; createdDate: string; completedDate: string; itemCount: number; childBomCount: number;
-}
-
-export interface BOMDetail {
-  id: string; level: number; materialCode: string; materialName: string;
-  specification: string; unit: string; quantity: number; note: string; children?: BOMDetail[];
 }
 
 export interface BOMChildRef {

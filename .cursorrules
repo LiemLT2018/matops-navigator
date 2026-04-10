@@ -1,0 +1,102 @@
+
+# MatOps Platform — MatOps Navigator (FE)
+
+**Đồng bộ với backend:** Kiến trúc server, CQRS, và quy tắc .NET — xem repo `erd_matops_api`, file `.cursorrules` ở root. **Contract HTTP/JSON và mã lỗi API (nguồn sự thật):** `MatOps.Domain/Common/BaseModels.cs` — `BaseRequest`, `BaseResponse`, `PagingResponse`, `TimeWithPageRequest`, `BasePageRequest`, `ApiErrorCode`.
+
+---
+
+## Tổng quan
+Giao diện web ERP/MES cho nhà máy cơ khí chế tạo. Phong cách công nghiệp, tối ưu bàn phím, bảng dữ liệu với inline editing (mục tiêu UX).
+
+---
+
+## 1. Nền tảng & Cấu trúc
+
+### Thiết kế hệ thống
+- **Layout:** Sidebar (collapsible) + Header — dark/light, chuyển ngôn ngữ, context công ty / đăng xuất (bổ sung hiển thị user nếu cần).
+- **Theme:** Công nghiệp — primary navy/steel blue, accent cam cảnh báo; dark / light.
+- **Đa ngôn ngữ:** `react-i18next`; **mặc định Tiếng Việt**, **English** đã dùng trong resource. Backend hỗ trợ thêm ko/ja/zh — mở rộng `i18n` khi đồng bộ chuỗi và nhu cầu sản phẩm.
+- **Header `Accept-Language`:** Gửi theo client (ví dụ `vi`, `en`) khớp convention API — hiện tại qua `lib/apiClient.ts`.
+
+### API Infrastructure (bám Domain / `BaseModels.cs`)
+- **Types:** `src/types/api.ts` — mirror contract backend (`BaseRequest`, `BaseResponse`, `PagingResponse`, `TimeWithPageRequest`, `DatePresetKey`, …).
+- **Client chính:** `src/lib/apiClient.ts` — Axios; JWT Bearer; DPS: header `X-Dps-Time`, `X-Dps-Keycert` (`Md5(DPS_CERT + time)`); merge `time`, `keycert`, `IpAddress` vào body **POST/PUT/PATCH**; `Accept-Language`; unwrap `data` khi `errorCode === 0`; `errorCode === 401` → xóa session, về login.
+- **`src/api/apiClient.ts`:** Không dùng làm entry HTTP chính — tránh nhân đôi logic; ưu tiên gộp vào `lib/apiClient` hoặc loại bỏ khi dọn code.
+- **`errorDictionary.ts`:** Map **`ApiErrorCode`** (số nguyên từ backend) → chuỗi UI đa ngôn ngữ; ưu tiên `errorMessage` từ server nếu đã localize. Bổ sung mã khi backend thêm `ApiErrorCode`.
+- **Services:** `src/api/services.ts` — gọi API thật. **Mock** (`mockApi.ts`) chỉ lớp service hoặc feature flag; **không** import mock trực tiếp từ `pages/` khi đã có endpoint backend.
+- **Cấu hình:** `BASE_URL`, `DPS_CERT` trong Settings (`matops_config` / `VITE_API_URL` khi cần).
+- **`DatePresetSelect`:** Preset thời gian dùng chung (today, yesterday, this_week, last_week, 7_days, this_month, last_month, this_year, last_year; tùy màn có thêm `all`) — **UTC** trong `utils/dateRange.ts`; gửi `fromDate`/`toDate` đúng `TimeWithPageRequest` (preset “All” → `null`).
+- **List / filter:** Gửi collection (ví dụ `Statuses`) đúng DTO backend — **`null` hoặc mảng rỗng = không lọc** (theo comment `BasePageRequest` trên server).
+- **Versioning:** Hiện gọi prefix `api/...`. Khi backend áp dụng v1/v2, cập nhật `baseURL` / prefix thống nhất.
+
+### Quy tắc chung
+- **Đăng nhập:** **RSA-OAEP** — `api/Auth/login-public-key` lấy public key, mã hóa mật khẩu, POST `api/Auth/login`. **Không** dùng MD5 cho mật khẩu đăng nhập.
+- **keycert (request):** `Md5(DPS_CERT + time)` theo `BaseRequest` — **không** nhầm với hash mật khẩu.
+- **MMS / master data:** Chấp nhận `Guid?`, mã vật tư tạm dạng `UNKNOWN_...` — UI không giả định mọi dòng đã có GUID cố định.
+- **Số hiển thị:** Format locale (dấu chấm/phẩy) — `NumberDisplay` / `formatNumber`.
+- **Phân trang:** `PagingResponse` + `pagination` khớp backend.
+
+---
+
+## 2. Các Module chính
+
+### Dashboard tổng quan
+- **KPI Cards:** Tổng SO, BOM Design, PO, Production Order với trạng thái (pending/in-progress/done)
+- **Warning Panel:** Danh sách cảnh báo với mức độ (critical/warning/info) — thiếu vật tư, chậm trả đơn, chậm thiết kế, PR về chậm
+- **Chart so sánh:** Kế hoạch vs Thực tế (bar/line chart)
+
+### Quản lý đơn hàng
+- **Sales Order:** Bảng danh sách SO, filter theo trạng thái/thời gian, xem chi tiết, tạo/sửa
+- **Product Order:** Bảng PO từ phòng kỹ thuật, liên kết với SO gốc, chuyển trạng thái
+
+### Quản lý BOM
+- **Hai chế độ hiển thị:**
+  1. BOM Master grid → click mở chi tiết (form/dialog hoặc route con — tùy triển khai)
+  2. Danh sách BOM Master (SP + KH) với expandable row, BOM Detail inline
+- **Import BOM từ Excel:** Dialog chọn Product Order → Sản phẩm → Upload file Excel
+- **BOM Detail:** Bảng cây (tree table) cấu trúc vật tư nhiều cấp
+
+### Quản lý mua hàng
+- **Purchase Request (PR):**
+  - Tạo phiếu linh hoạt — cho phép thêm item chưa có trong danh mục vật tư
+  - Autocomplete/suggest khi nhập tên vật tư, tự tạo item mới nếu chưa tồn tại
+  - Tổng hợp từ nhiều BOM, suggest số lượng cần mua dựa trên tồn kho
+  - Chọn NCC đề xuất
+- **Purchase Order (PO):** Bộ phận mua hàng cập nhật đơn giá final, NCC final từ PR
+
+### Quản lý kho vật tư
+- Nhập/xuất kho, tồn kho hiện tại, lịch sử giao dịch, cảnh báo tồn kho thấp
+
+### Quản lý sản xuất
+- Lệnh sản xuất, tiến độ, phân công, theo dõi trạng thái từng công đoạn
+
+### QC sản phẩm
+- Phiếu kiểm tra chất lượng, tiêu chí đánh giá, kết quả pass/fail, lịch sử QC
+
+### Quản lý kho thành phẩm
+- Nhập kho thành phẩm từ sản xuất, xuất kho theo SO, tồn kho thành phẩm
+
+---
+
+## 3. Trải nghiệm người dùng
+- Bảng: inline editing, keyboard (Tab, Enter, Escape) — mục tiêu
+- Form: phím tắt — mục tiêu
+- Toast cho phản hồi API; loading (skeleton bảng khi phù hợp)
+- Responsive nhưng ưu tiên desktop
+
+---
+
+## 4. Cấu trúc thư mục (thực tế / hướng dẫn)
+```
+src/
+  api/           — services.ts, suggestApi.ts, mockApi.ts, errorDictionary.ts
+  lib/           — apiClient.ts (Axios chính), authStorage, utils chung
+  components/    — UI dùng chung (DatePresetSelect, NumberDisplay, layout, ui/)
+  context/       — ví dụ TenantContext
+  hooks/         — useTheme, use-mobile, toast helpers
+  i18n/          — vi.json, en.json
+  pages/         — route pages theo module
+  types/         — types TypeScript dùng chung (api, models)
+  utils/         — dateRange, formatNumber, rsa, excel, …
+  constants/
+```

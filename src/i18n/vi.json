@@ -110,6 +110,7 @@
       "orderDate": "Ngày đặt",
       "deliveryDate": "Ngày giao",
       "amount": "Giá trị",
+      "currency": "Loại tiền",
       "status": "Trạng thái"
     },
     "productOrder": {
@@ -119,6 +120,9 @@
       "product": "Sản phẩm",
       "quantity": "Số lượng",
       "dueDate": "Hạn hoàn thành",
+      "orderDate": "Ngày lệnh",
+      "priority": "Ưu tiên",
+      "remark": "Ghi chú",
       "status": "Trạng thái"
     }
   },
@@ -413,6 +417,9 @@
   "production": {
     "title": "Quản lý sản xuất",
     "orderCode": "Mã LSX",
+    "productOrderRef": "Tham chiếu PO",
+    "productionDate": "Ngày sản xuất",
+    "remark": "Ghi chú",
     "product": "Sản phẩm",
     "quantity": "Số lượng",
     "startDate": "Ngày bắt đầu",

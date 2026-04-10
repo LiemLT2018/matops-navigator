@@ -25,7 +25,7 @@ import type {
   BusinessPartnerDetail,
 } from '@/types/models';
 import { EdTypeFind } from '@/types/models';
-import type { BOMDetail } from '@/api/mockApi';
+import type { BOMDetail } from '@/types/bom';
 import type { ProductBomTemplateChildTreeNode } from '@/api/services';
 
 /** Hàng hiển thị — tương thích bảng UI */
@@ -134,7 +134,7 @@ function mapLineToBOMDetail(line: ProductBomTemplateLineListRow): BOMDetail {
     id: line.uuid,
     level: 1,
     materialCode: line.mdItem?.code ?? line.code ?? '',
-    materialName: line.mdItem?.name ?? line.mdItemAlias?.name ?? '',
+    materialName: line.mdItem?.name ?? line.mdItemAlias?.name ?? line.remark?.trim() ?? '',
     specification: '',
     unit: line.mdUom?.name ?? line.mdUom?.code ?? '',
     quantity: Number.isFinite(q) ? q : 0,
@@ -890,8 +890,8 @@ export default function BOMPage() {
           <TableBody>
             {details.map(d => (
               <TableRow key={d.id}>
-                <TableCell className="font-mono text-sm">{d.materialCode}</TableCell>
-                <TableCell>{d.materialName}</TableCell>
+                <TableCell className="font-mono text-sm">{d.materialCode || '—'}</TableCell>
+                <TableCell>{d.materialName || '—'}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{d.specification}</TableCell>
                 <TableCell>{d.unit}</TableCell>
                 <TableCell className="text-right font-mono"><NumberDisplay value={d.quantity} /></TableCell>
@@ -926,7 +926,7 @@ export default function BOMPage() {
               onChange={(v) => { setFormProduct(v); setFormProductUuid(''); }}
               onSelect={(item) => { setFormProduct(item.name); setFormProductUuid(item.uuid); }}
               type="item"
-              minChars={0}
+              minChars={2}
               placeholder={t('bom.product')}
             />
           </div>
@@ -981,7 +981,7 @@ export default function BOMPage() {
                       <SuggestInputText value={row.bomName}
                         onChange={v => handleBomNameChange(i, v)}
                         onSelect={item => handleBomSuggestSelect(i, item)}
-                        type="bom" minChars={0} placeholder={t('bom.bomName')} />
+                        type="bom" minChars={2} placeholder={t('bom.bomName')} />
                     </TableCell>
                     <TableCell className="p-1">
                       <Input type="number" value={row.quantity} onChange={e => { const u = [...formChildBOMs]; u[i] = { ...u[i], quantity: e.target.value }; setFormChildBOMs(u); }} className="h-8 text-sm" />
@@ -1059,7 +1059,7 @@ export default function BOMPage() {
                       <SuggestInputWithQuickAdd value={row.materialName} selectedUuid={row.materialCode}
                         onChange={v => handleCommittedMatFieldChange(i, 'materialName', v)}
                         onSelect={item => handleCommittedMatSuggestSelect(i, 'materialName', item)}
-                        type="material" quickAddType="material" placeholder={t('bom.materialName')} minChars={0} />
+                        type="material" quickAddType="material" placeholder={t('bom.materialName')} minChars={2} />
                     </TableCell>
                     <TableCell className="p-1">
                       <SuggestInputWithQuickAdd value={row.specification}
@@ -1101,7 +1101,7 @@ export default function BOMPage() {
                     <SuggestInputWithQuickAdd id="bom-draft-material-name" value={draftMaterial.materialName} selectedUuid={draftMaterial.materialCode}
                       onChange={v => handleDraftMatFieldChange('materialName', v)}
                       onSelect={item => handleDraftMatSuggestSelect('materialName', item)}
-                      type="material" quickAddType="material" placeholder={t('bom.materialName')} minChars={0} />
+                      type="material" quickAddType="material" placeholder={t('bom.materialName')} minChars={2} />
                   </TableCell>
                   <TableCell className="p-1">
                     <SuggestInputWithQuickAdd value={draftMaterial.specification}

@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getQCInspections, type QCInspection } from '@/api/mockApi';
+import { qcMockService, type QCInspection } from '@/api/services';
 import { Plus, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -14,7 +14,9 @@ export default function QCPage() {
   const [data, setData] = useState<QCInspection[]>([]);
   const [search, setSearch] = useState('');
 
-  useEffect(() => { getQCInspections().then(r => setData(r.data)); }, []);
+  useEffect(() => {
+    void qcMockService.list().then(setData);
+  }, []);
 
   const filtered = data.filter(d =>
     !search || d.code.toLowerCase().includes(search.toLowerCase()) || d.product.toLowerCase().includes(search.toLowerCase())

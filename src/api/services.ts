@@ -31,8 +31,18 @@ import {
   ProductBomTemplateListQuery, ProductBomTemplateLineListQuery,
   ProductBomTemplateCreateBody,
   ProductBomTemplateLineMutateBody,
+  SalesOrderListRow,
+  ProductOrderListRow,
+  ProductionOrderListRow,
 } from '@/types/models';
 import { normalizeInventoryBalanceItem } from '@/utils/inventoryBalanceRow';
+import {
+  getDashboardKPI,
+  getDashboardWarnings,
+  getPlanVsActual,
+  getQCInspections,
+  getUndefinedMaterials,
+} from './mockApi';
 
 // ============================================================
 // Helper: build query params, strip undefined
@@ -306,6 +316,9 @@ export interface BomMaterialSuggestItem {
   itemAliasId: string | null;
   code: string;
   name: string;
+  /** Khớp backend BomMaterialSuggestDto — dùng cho gợi ý & lọc client (alias, từ khóa). */
+  normalizedName?: string;
+  aliases?: string[];
   specification: string | null;
   unitName: string | null;
   mdUomUuid: string;
@@ -473,6 +486,56 @@ export const documentNumberRuleService = {
   create: (body: DocumentNumberRuleCreateBody) => create<DocumentNumberRuleDetail>('api/DocumentNumberRule', body),
   update: (uuid: string, body: DocumentNumberRuleCreateBody) => update<DocumentNumberRuleDetail>(`api/DocumentNumberRule/${uuid}`, body),
   delete: (uuid: string) => remove(`api/DocumentNumberRule/${uuid}`),
+};
+
+// ============================================================
+// Sales Order — api/SalesOrder
+// ============================================================
+
+export const salesOrderService = {
+  list: (query?: ListQuery) => getList<SalesOrderListRow>('api/SalesOrder', query),
+};
+
+// ============================================================
+// Product Order — api/ProductOrder
+// ============================================================
+
+export const productOrderService = {
+  list: (query?: ListQuery) => getList<ProductOrderListRow>('api/ProductOrder', query),
+};
+
+// ============================================================
+// Production Order — api/ProductionOrder
+// ============================================================
+
+export const productionOrderService = {
+  list: (query?: ListQuery) => getList<ProductionOrderListRow>('api/ProductionOrder', query),
+};
+
+// ============================================================
+// Mock-backed modules (chưa thay API thật toàn phần)
+// ============================================================
+
+export type {
+  DashboardKPI,
+  Warning,
+  PlanVsActual,
+  QCInspection,
+  UndefinedMaterial,
+} from './mockApi';
+
+export const dashboardMockService = {
+  fetchKPI: async () => (await getDashboardKPI()).data,
+  fetchWarnings: async () => (await getDashboardWarnings()).data,
+  fetchPlanVsActual: async () => (await getPlanVsActual()).data,
+};
+
+export const qcMockService = {
+  list: async () => (await getQCInspections()).data,
+};
+
+export const undefinedMaterialsMockService = {
+  list: async () => (await getUndefinedMaterials()).data,
 };
 
 // ============================================================

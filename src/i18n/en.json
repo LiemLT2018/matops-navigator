@@ -110,6 +110,7 @@
       "orderDate": "Order Date",
       "deliveryDate": "Delivery Date",
       "amount": "Amount",
+      "currency": "Currency",
       "status": "Status"
     },
     "productOrder": {
@@ -119,6 +120,9 @@
       "product": "Product",
       "quantity": "Quantity",
       "dueDate": "Due Date",
+      "orderDate": "Order date",
+      "priority": "Priority",
+      "remark": "Remark",
       "status": "Status"
     }
   },
@@ -413,6 +417,9 @@
   "production": {
     "title": "Production Management",
     "orderCode": "Prod. Code",
+    "productOrderRef": "Product order ref",
+    "productionDate": "Production date",
+    "remark": "Remark",
     "product": "Product",
     "quantity": "Quantity",
     "startDate": "Start Date",

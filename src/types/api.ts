@@ -25,8 +25,9 @@ export interface PaginationData {
 
 export interface TimeWithPageRequest {
   keyword: string | null;
-  fromDate: string;
-  toDate: string;
+  /** ISO 8601 UTC; preset “All” → null (khớp backend). */
+  fromDate: string | null;
+  toDate: string | null;
   pageSize: number;
   page: number;
 }

@@ -7,6 +7,7 @@ import { Md5 } from "ts-md5";
 import { toast } from "sonner";
 import i18n from "@/i18n";
 import { clearAuthSession, getAccessToken } from "@/lib/authStorage";
+import { getErrorMessage } from "@/api/errorDictionary";
 
 /** Envelope kiểu Lovable / một số gateway: `{ success, message, data }` */
 export interface SuccessEnvelope<T = unknown> {
@@ -108,6 +109,15 @@ function clearSessionAndRedirectToLogin() {
   window.location.href = "/login";
 }
 
+/** Ưu tiên errorMessage từ server; fallback errorDictionary (ApiErrorCode); cuối cùng errors.system. */
+function resolveMatOpsUserMessage(errorCode: number, errorMessage: string): string {
+  const trimmed = errorMessage?.trim();
+  if (trimmed) return trimmed;
+  const fromDict = getErrorMessage(errorCode, i18n.language);
+  if (fromDict) return fromDict;
+  return i18n.t("errors.system");
+}
+
 function createApiClient(): AxiosInstance {
   /**
    * Priority: VITE_API_URL env > saved matops_config.BASE_URL > fallback "/api".
@@ -187,7 +197,8 @@ function createApiClient(): AxiosInstance {
 
       if (isMatOpsEnvelope(payload)) {
         if (payload.errorCode !== 0) {
-          return Promise.reject(new MatOpsApiError(payload.errorCode, payload.errorMessage || ""));
+          const msg = resolveMatOpsUserMessage(payload.errorCode, payload.errorMessage || "");
+          return Promise.reject(new MatOpsApiError(payload.errorCode, msg));
         }
         response.data = payload.data;
         return response;

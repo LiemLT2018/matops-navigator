@@ -3,8 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/StatusBadge';
 import { NumberDisplay } from '@/components/NumberDisplay';
-import { getDashboardKPI, getDashboardWarnings, getPlanVsActual } from '@/api/mockApi';
-import type { DashboardKPI, Warning, PlanVsActual } from '@/api/mockApi';
+import {
+  dashboardMockService,
+  type DashboardKPI,
+  type Warning,
+  type PlanVsActual,
+} from '@/api/services';
 import { ShoppingCart, Layers, ShoppingBag, Factory, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -15,9 +19,9 @@ export default function DashboardPage() {
   const [chartData, setChartData] = useState<PlanVsActual[]>([]);
 
   useEffect(() => {
-    getDashboardKPI().then(r => setKpi(r.data));
-    getDashboardWarnings().then(r => setWarnings(r.data));
-    getPlanVsActual().then(r => setChartData(r.data));
+    void dashboardMockService.fetchKPI().then(setKpi);
+    void dashboardMockService.fetchWarnings().then(setWarnings);
+    void dashboardMockService.fetchPlanVsActual().then(setChartData);
   }, []);
 
   const kpiCards = kpi ? [

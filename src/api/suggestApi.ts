@@ -148,19 +148,22 @@ export async function suggestSearch(
     try {
       const user = getAuthUser();
       const rows = await productBomTemplateService.materialSuggestions(q, limit, user?.mdCompanyUuid);
-      const items: SuggestData[] = rows.map(r => ({
-        type: 'material',
-        uuid: r.materialVariantId,
-        name: r.name,
-        normalizedName: removeViDiacritics(r.name),
-        alias: [],
-        specification: r.specification ?? undefined,
-        mdUomUuid: r.mdUomUuid,
-        unitName: r.unitName ?? undefined,
-        manufacturer: r.manufacturer,
-        itemAliasId: r.itemAliasId,
-        source: r.source,
-      }));
+      const items: SuggestData[] = rows.map(r => {
+        const aliases = r.aliases?.length ? r.aliases : [];
+        return {
+          type: 'material',
+          uuid: r.materialVariantId,
+          name: r.name,
+          normalizedName: removeViDiacritics(r.name),
+          alias: aliases,
+          specification: r.specification ?? undefined,
+          mdUomUuid: r.mdUomUuid,
+          unitName: r.unitName ?? undefined,
+          manufacturer: r.manufacturer,
+          itemAliasId: r.itemAliasId,
+          source: r.source,
+        };
+      });
       return { type, items, limit, hasMore: items.length >= limit };
     } catch {
       // fall through to mock

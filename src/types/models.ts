@@ -41,6 +41,47 @@ export interface ApiListData<T> {
 }
 
 // ============================================================
+// Sales / Manufacturing list rows (GET api/SalesOrder, ProductOrder, ProductionOrder)
+// ============================================================
+
+export interface SalesOrderListRow {
+  uuid: string;
+  mdCompanyUuid: string;
+  mdBusinessPartnerUuid: string;
+  code: string;
+  orderDate: string;
+  expectedDeliveryDate?: string | null;
+  status: number;
+  currencyCode: string;
+  remark?: string | null;
+  createdAt: string;
+}
+
+export interface ProductOrderListRow {
+  uuid: string;
+  mdCompanyUuid: string;
+  trxSalesOrderUuid?: string | null;
+  code: string;
+  orderDate: string;
+  status: number;
+  priority: number;
+  remark?: string | null;
+  createdAt: string;
+}
+
+export interface ProductionOrderListRow {
+  uuid: string;
+  mdCompanyUuid: string;
+  mdPlantUuid?: string | null;
+  trxProductOrderUuid: string;
+  code: string;
+  productionDate: string;
+  status: number;
+  remark?: string | null;
+  createdAt: string;
+}
+
+// ============================================================
 // Query params shared by most list endpoints
 // ============================================================
 

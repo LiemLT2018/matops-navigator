@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Link2 } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
-import { getUndefinedMaterials, type UndefinedMaterial } from '@/api/mockApi';
+import { undefinedMaterialsMockService, type UndefinedMaterial } from '@/api/services';
 
 export default function UndefinedMaterialsPage() {
   const { t } = useTranslation();
@@ -14,7 +14,12 @@ export default function UndefinedMaterialsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getUndefinedMaterials().then(res => { setData(res.data); setLoading(false); });
+    void undefinedMaterialsMockService
+      .list()
+      .then((items) => {
+        setData(items);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   return (
