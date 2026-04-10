@@ -22,7 +22,12 @@ export type MatopsAuthUser = {
 /** Token có thể nằm ở localStorage (duy trì) hoặc sessionStorage (chỉ phiên tab). */
 export function getAccessToken(): string | null {
   try {
-    return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+    const raw = localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY);
+    if (raw == null) return null;
+    const t = raw.trim();
+    // Từng lưu nhầm undefined/null thành chuỗi → không coi là JWT hợp lệ.
+    if (t === "" || t === "undefined" || t === "null") return null;
+    return t;
   } catch {
     return null;
   }

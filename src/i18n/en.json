@@ -470,6 +470,7 @@
     "success": "Success",
     "failed": "Failed",
     "unauthorized": "Session expired. Please login again.",
+    "loginRequired": "You are not signed in or your session is no longer valid. Please sign in to continue.",
     "missingCompany": "Company context is missing. Please sign in again.",
     "undefined": "Undefined error: {{message}}"
   },

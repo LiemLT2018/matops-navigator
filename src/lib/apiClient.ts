@@ -4,9 +4,8 @@ import axios, {
   type AxiosResponse,
 } from "axios";
 import { Md5 } from "ts-md5";
-import { toast } from "sonner";
 import i18n from "@/i18n";
-import { clearAuthSession, getAccessToken } from "@/lib/authStorage";
+import { getAccessToken } from "@/lib/authStorage";
 import { getErrorMessage } from "@/api/errorDictionary";
 
 /** Envelope kiểu Lovable / một số gateway: `{ success, message, data }` */
@@ -44,8 +43,10 @@ function getMatopsConfig() {
 }
 
 function resolveToken(): string | null {
-  const fromStore = authTokenGetter?.();
-  if (fromStore) return fromStore;
+  const fromGetter = authTokenGetter?.()?.trim();
+  if (fromGetter && fromGetter !== "undefined" && fromGetter !== "null") {
+    return fromGetter;
+  }
   return getAccessToken();
 }
 
@@ -103,12 +104,6 @@ function matOpsUnauthorized(payload: unknown): boolean {
   return c === 401 || c === "401";
 }
 
-function clearSessionAndRedirectToLogin() {
-  toast.error(i18n.t("errors.unauthorized"));
-  clearAuthSession();
-  window.location.href = "/login";
-}
-
 /** Ưu tiên errorMessage từ server; fallback errorDictionary (ApiErrorCode); cuối cùng errors.system. */
 function resolveMatOpsUserMessage(errorCode: number, errorMessage: string): string {
   const trimmed = errorMessage?.trim();
@@ -118,15 +113,37 @@ function resolveMatOpsUserMessage(errorCode: number, errorMessage: string): stri
   return i18n.t("errors.system");
 }
 
-function createApiClient(): AxiosInstance {
-  /**
-   * Priority: VITE_API_URL env > saved matops_config.BASE_URL > fallback "/api".
-   * This ensures the Settings page BASE_URL is always respected.
-   */
+/**
+ * Services gọi path dạng `api/Controller/...`. Nếu baseURL đã kết thúc bằng `/api`,
+ * axios sẽ thành `.../api/api/...` (404). Bỏ một lần hậu tố `/api` khỏi base.
+ */
+function normalizeApiBaseUrl(raw: string): string {
+  const trimmed = raw.trim().replace(/\/+$/, "");
+  if (trimmed === "" || trimmed === "/") return "/";
+  const withoutApi = trimmed.replace(/\/api$/i, "");
+  return withoutApi === "" ? "/" : withoutApi;
+}
+
+/**
+ * Priority: VITE_API_URL env > saved matops_config.BASE_URL > fallback "/api".
+ * Dùng chung lúc tạo client và khi lưu Settings (không cần reload trang).
+ */
+function computeApiBaseUrl(): string {
   const envBase = (import.meta.env.VITE_API_URL ?? "").trim();
-  const baseURL = envBase !== ""
-    ? envBase
-    : (getMatopsConfig().BASE_URL ?? "/api");
+  const resolved =
+    envBase !== "" ? envBase : (getMatopsConfig().BASE_URL ?? "/api");
+  return normalizeApiBaseUrl(resolved);
+}
+
+function isPublicAuthApiPath(url: string | undefined): boolean {
+  if (!url) return false;
+  return /(^|\/)api\/auth\//i.test(url);
+}
+
+const crossOriginBaseWarned = new Set<string>();
+
+function createApiClient(): AxiosInstance {
+  const baseURL = computeApiBaseUrl();
 
   const instance = axios.create({
     baseURL,
@@ -148,6 +165,36 @@ function createApiClient(): AxiosInstance {
     const token = resolveToken();
     if (token) {
       config.headers.set("Authorization", `Bearer ${token}`);
+    } else if (
+      import.meta.env.DEV &&
+      !isPublicAuthApiPath(config.url) &&
+      typeof config.url === "string" &&
+      /^api\//i.test(config.url)
+    ) {
+      const full = `${config.baseURL ?? ""}${config.url ?? ""}`;
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[api] Thiếu JWT (Authorization) — request sẽ 401 nếu endpoint cần đăng nhập:",
+        full,
+      );
+    }
+
+    if (import.meta.env.DEV && typeof window !== "undefined") {
+      const b = (config.baseURL ?? "").trim();
+      if (b.startsWith("http") && !crossOriginBaseWarned.has(b)) {
+        try {
+          if (new URL(b).origin !== window.location.origin) {
+            crossOriginBaseWarned.add(b);
+            // eslint-disable-next-line no-console
+            console.warn(
+              "[api] Đang gọi API cross-origin (%s). JWT phải do đúng host này cấp (cùng SigningKey). Dev: đặt BASE_URL=/api và VITE_DEV_PROXY_TARGET trỏ tới API.",
+              b,
+            );
+          }
+        } catch {
+          /* ignore invalid baseURL */
+        }
+      }
     }
 
     const method = config.method?.toLowerCase();
@@ -190,11 +237,6 @@ function createApiClient(): AxiosInstance {
         return response;
       }
 
-      if (matOpsUnauthorized(payload)) {
-        clearSessionAndRedirectToLogin();
-        return Promise.reject(new Error("Unauthorized"));
-      }
-
       if (isMatOpsEnvelope(payload)) {
         if (payload.errorCode !== 0) {
           const msg = resolveMatOpsUserMessage(payload.errorCode, payload.errorMessage || "");
@@ -208,14 +250,19 @@ function createApiClient(): AxiosInstance {
     },
     (error) => {
       const status = error.response?.status;
-      if (status === 401) {
-        clearSessionAndRedirectToLogin();
-        return Promise.reject(new Error("Unauthorized"));
-      }
       const data = error.response?.data;
-      if (matOpsUnauthorized(data)) {
-        clearSessionAndRedirectToLogin();
-        return Promise.reject(new Error("Unauthorized"));
+      if (status === 401 || matOpsUnauthorized(data)) {
+        const p = data !== null && typeof data === "object" ? (data as Record<string, unknown>) : {};
+        const codeRaw = p.errorCode;
+        const code =
+          typeof codeRaw === "number"
+            ? codeRaw
+            : codeRaw === "401"
+              ? 401
+              : 401;
+        const em = typeof p.errorMessage === "string" ? p.errorMessage : "";
+        const msg = resolveMatOpsUserMessage(code, em);
+        return Promise.reject(new MatOpsApiError(code, msg));
       }
       return Promise.reject(error);
     },
@@ -225,3 +272,8 @@ function createApiClient(): AxiosInstance {
 }
 
 export const apiClient = createApiClient();
+
+/** Cập nhật baseURL sau khi đổi `matops_config` trong Settings (VITE_API_URL vẫn cần restart dev server). */
+export function syncApiClientBaseUrl() {
+  apiClient.defaults.baseURL = computeApiBaseUrl();
+}

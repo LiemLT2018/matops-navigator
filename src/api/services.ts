@@ -94,6 +94,67 @@ function asRecord(v: unknown): Record<string, unknown> {
   return v !== null && typeof v === 'object' ? (v as Record<string, unknown>) : {};
 }
 
+function strField(d: Record<string, unknown>, camel: string, pascal: string): string {
+  const a = d[camel];
+  const b = d[pascal];
+  if (typeof a === 'string' && a.trim() !== '') return a.trim();
+  if (typeof b === 'string' && b.trim() !== '') return b.trim();
+  return '';
+}
+
+/** Payload POST /api/Auth/login — server có thể camelCase hoặc PascalCase. */
+function normalizeLoginResponsePayload(raw: unknown): {
+  accessToken: string;
+  tokenType: string;
+  expiresAtUtc: string;
+  user: {
+    uuid: string;
+    account: string;
+    name: string;
+    mdCompanyUuid: string;
+    mdDepartmentUuid: string | null;
+  };
+  allowedCompanies?: { uuid: string; code: string; name: string; isDefault?: boolean }[];
+} {
+  const d = asRecord(raw);
+  const u = asRecord(d.user ?? d.User);
+  const mdDept = u.mdDepartmentUuid ?? u.MdDepartmentUuid;
+  const mdDepartmentUuid =
+    mdDept === null || mdDept === undefined
+      ? null
+      : typeof mdDept === 'string'
+        ? mdDept
+        : String(mdDept);
+
+  let allowedCompanies: { uuid: string; code: string; name: string; isDefault?: boolean }[] | undefined;
+  const acRaw = d.allowedCompanies ?? d.AllowedCompanies;
+  if (Array.isArray(acRaw)) {
+    allowedCompanies = acRaw.map((x) => {
+      const r = asRecord(x);
+      return {
+        uuid: strField(r, 'uuid', 'Uuid'),
+        code: strField(r, 'code', 'Code'),
+        name: strField(r, 'name', 'Name'),
+        isDefault: Boolean(r.isDefault ?? r.IsDefault),
+      };
+    });
+  }
+
+  return {
+    accessToken: strField(d, 'accessToken', 'AccessToken'),
+    tokenType: strField(d, 'tokenType', 'TokenType') || 'Bearer',
+    expiresAtUtc: strField(d, 'expiresAtUtc', 'ExpiresAtUtc'),
+    user: {
+      uuid: strField(u, 'uuid', 'Uuid'),
+      account: strField(u, 'account', 'Account'),
+      name: strField(u, 'name', 'Name'),
+      mdCompanyUuid: strField(u, 'mdCompanyUuid', 'MdCompanyUuid'),
+      mdDepartmentUuid,
+    },
+    allowedCompanies,
+  };
+}
+
 /** Chuẩn hóa payload danh sách (camelCase hoặc PascalCase) — tránh `items` undefined → lỗi khi xem chi tiết BOM. */
 function normalizeApiListData<T>(raw: unknown): ApiListData<T> {
   const p = asRecord(raw);
@@ -548,10 +609,11 @@ export const authService = {
   /** Fetch RSA public key for password encryption */
   getLoginPublicKey: async () => {
     const res = await apiClient.get('api/Auth/login-public-key');
-    return res.data as {
-      publicKeyPem: string;
-      encryption: string;
-      hash: string;
+    const d = asRecord(res.data);
+    return {
+      publicKeyPem: strField(d, 'publicKeyPem', 'PublicKeyPem'),
+      encryption: strField(d, 'encryption', 'Encryption') || 'RSA-OAEP',
+      hash: strField(d, 'hash', 'Hash') || 'SHA-256',
     };
   },
 
@@ -561,13 +623,7 @@ export const authService = {
       account,
       encryptedPassword,
     });
-    return res.data as {
-      accessToken: string;
-      tokenType: string;
-      expiresAtUtc: string;
-      user: { uuid: string; account: string; name: string; mdCompanyUuid: string; mdDepartmentUuid: string | null };
-      allowedCompanies?: { uuid: string; code: string; name: string; isDefault?: boolean }[];
-    };
+    return normalizeLoginResponsePayload(res.data);
   },
 
   /** Companies the current user can switch to (requires tenant session cookie from login). */

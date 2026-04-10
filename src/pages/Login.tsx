@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Factory, Eye, EyeOff, LogIn } from "lucide-react";
@@ -17,9 +17,15 @@ import {
 } from "@/lib/authStorage";
 import { encryptPasswordRSA } from "@/utils/rsa";
 
+type LoginLocationState = {
+  from?: string;
+  authRedirectReason?: "no_token" | "expired";
+};
+
 export default function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -33,6 +39,20 @@ export default function LoginPage() {
     }
   }, [navigate]);
 
+  /** RequireAuth / hết phiên: hiện toast (trước đây redirect im lặng). */
+  useEffect(() => {
+    const st = location.state as LoginLocationState | null;
+    const reason = st?.authRedirectReason;
+    if (!reason) return;
+    const msg =
+      reason === "expired" ? t("errors.unauthorized") : t("errors.loginRequired");
+    toast.error(msg, { id: "matops-auth-redirect" });
+    navigate("/login", {
+      replace: true,
+      state: st?.from ? { from: st.from } : undefined,
+    });
+  }, [location.state, navigate, t]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
@@ -44,8 +64,12 @@ export default function LoginPage() {
       const { publicKeyPem } = await authService.getLoginPublicKey();
       const encrypted = await encryptPasswordRSA(publicKeyPem, password);
       const res = await authService.login(username.trim(), encrypted);
+      if (!res.accessToken?.trim()) {
+        toast.error(t("errors.system"));
+        return;
+      }
       setAuthSession({
-        accessToken: res.accessToken,
+        accessToken: res.accessToken.trim(),
         user: {
           ...res.user,
           allowedCompanies: res.allowedCompanies ?? [],

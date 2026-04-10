@@ -13,12 +13,24 @@ export function RequireAuth() {
   const token = getAccessToken();
 
   if (!token) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location.pathname, authRedirectReason: "no_token" as const }}
+      />
+    );
   }
 
   if (isAccessTokenExpired()) {
     clearAuthSession();
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location.pathname, authRedirectReason: "expired" as const }}
+      />
+    );
   }
 
   return <Outlet />;

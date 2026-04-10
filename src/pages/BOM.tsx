@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DatePresetSelect } from '@/components/DatePresetSelect';
 import { NumberDisplay } from '@/components/NumberDisplay';
 import {
@@ -1206,48 +1205,48 @@ export default function BOMPage() {
               {data.length === 0 ? (
                 <TableRow><TableCell colSpan={viewMode === 'list' ? 10 : 9} className="text-center py-8 text-muted-foreground">{t('common.noData')}</TableCell></TableRow>
               ) : data.map(row => (
-                <Collapsible key={row.id} open={expandedId === row.id} asChild>
-                  <>
-                    <TableRow className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => viewMode === 'list' ? handleExpand(row.id) : handleMasterClick(row)}>
-                      {viewMode === 'list' && (
-                        <TableCell>
-                          <CollapsibleTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => { e.stopPropagation(); handleExpand(row.id); }}>
-                              {expandedId === row.id ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                            </Button>
-                          </CollapsibleTrigger>
-                        </TableCell>
-                      )}
-                      <TableCell className="font-mono text-sm font-medium">{row.code}</TableCell>
-                      <TableCell>{row.product}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.customer}</TableCell>
-                      <TableCell className="font-mono text-sm">{row.version}</TableCell>
-                      <TableCell className="text-sm">{row.createdDate}</TableCell>
-                      <TableCell className="text-sm">{row.completedDate || '—'}</TableCell>
-                      <TableCell className="text-center">
-                        {row.childBomCount > 0 ? <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary text-xs font-bold">{row.childBomCount}</span> : '—'}
-                      </TableCell>
-                      <TableCell><StatusBadge status={row.status} /></TableCell>
+                <Fragment key={row.id}>
+                  <TableRow className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => viewMode === 'list' ? handleExpand(row.id) : handleMasterClick(row)}>
+                    {viewMode === 'list' && (
                       <TableCell>
-                        <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleMasterClick(row)} title={t('common.edit')}><Edit className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" title={t('bom.clone')}><Copy className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title={t('common.delete')}><Trash2 className="h-3.5 w-3.5" /></Button>
-                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={e => { e.stopPropagation(); handleExpand(row.id); }}
+                        >
+                          {expandedId === row.id ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </Button>
+                      </TableCell>
+                    )}
+                    <TableCell className="font-mono text-sm font-medium">{row.code}</TableCell>
+                    <TableCell>{row.product}</TableCell>
+                    <TableCell className="text-muted-foreground">{row.customer}</TableCell>
+                    <TableCell className="font-mono text-sm">{row.version}</TableCell>
+                    <TableCell className="text-sm">{row.createdDate}</TableCell>
+                    <TableCell className="text-sm">{row.completedDate || '—'}</TableCell>
+                    <TableCell className="text-center">
+                      {row.childBomCount > 0 ? <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary text-xs font-bold">{row.childBomCount}</span> : '—'}
+                    </TableCell>
+                    <TableCell><StatusBadge status={row.status} /></TableCell>
+                    <TableCell>
+                      <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleMasterClick(row)} title={t('common.edit')}><Edit className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title={t('bom.clone')}><Copy className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title={t('common.delete')}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  {viewMode === 'list' && expandedId === row.id && (
+                    <TableRow>
+                      <TableCell colSpan={10} className="p-0">
+                        {bomDetails[row.id] && renderBOMDetailTable(bomDetails[row.id], bomChildTrees[row.id] || [])}
                       </TableCell>
                     </TableRow>
-                    {viewMode === 'list' && (
-                      <CollapsibleContent asChild>
-                        <tr>
-                          <td colSpan={10} className="p-0">
-                            {bomDetails[row.id] && renderBOMDetailTable(bomDetails[row.id], bomChildTrees[row.id] || [])}
-                          </td>
-                        </tr>
-                      </CollapsibleContent>
-                    )}
-                  </>
-                </Collapsible>
+                  )}
+                </Fragment>
               ))}
             </TableBody>
           </Table>

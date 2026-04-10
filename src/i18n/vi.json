@@ -470,6 +470,7 @@
     "success": "Thành công",
     "failed": "Thất bại",
     "unauthorized": "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.",
+    "loginRequired": "Bạn chưa đăng nhập hoặc phiên không còn hiệu lực. Vui lòng đăng nhập để tiếp tục.",
     "missingCompany": "Không xác định được công ty. Vui lòng đăng nhập lại.",
     "undefined": "Lỗi chưa định nghĩa: {{message}}"
   },
