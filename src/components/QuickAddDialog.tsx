@@ -19,10 +19,12 @@ interface QuickAddDialogProps {
   defaultName: string;
   /** Required for specification type - the material UUID to attach the spec to */
   materialUuid?: string;
+  /** Gửi lên API quick-add quy cách làm default_md_uom_uuid của md_item_spec (đơn vị dòng). */
+  defaultMdUomUuid?: string;
   onAdded: (type: QuickAddType, item: DictItem) => void;
 }
 
-export function QuickAddDialog({ open, onOpenChange, type, defaultName, materialUuid, onAdded }: QuickAddDialogProps) {
+export function QuickAddDialog({ open, onOpenChange, type, defaultName, materialUuid, defaultMdUomUuid, onAdded }: QuickAddDialogProps) {
   const { t } = useTranslation();
 
   const [matUuid, setMatUuid] = useState('');
@@ -73,7 +75,9 @@ export function QuickAddDialog({ open, onOpenChange, type, defaultName, material
         toast.error(t('excelImport.needMaterialFirst'));
         return;
       }
-      newItem = await addSpecificationApi(materialUuid, specValue);
+      newItem = await addSpecificationApi(materialUuid, specValue, {
+        defaultMdUomUuid: defaultMdUomUuid?.trim() || undefined,
+      });
     } else if (type === 'unit') {
       newItem = await addUnitApi(unitName);
     } else if (type === 'manufacturer') {
@@ -85,7 +89,7 @@ export function QuickAddDialog({ open, onOpenChange, type, defaultName, material
       toast.success(`${t('excelImport.added')} ${newItem.name}`);
       onOpenChange(false);
     }
-  }, [type, matUuid, matName, matNormalized, matAliases, specValue, unitName, mfrCode, mfrName, materialUuid, onAdded, onOpenChange, t]);
+  }, [type, matUuid, matName, matNormalized, matAliases, specValue, unitName, mfrCode, mfrName, materialUuid, defaultMdUomUuid, onAdded, onOpenChange, t]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

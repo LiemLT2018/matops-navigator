@@ -172,9 +172,25 @@ export async function addMaterialApi(item: { uuid: string; name: string; normali
   return { ...item, rawText: '' };
 }
 
-export async function addSpecificationApi(materialUuid: string, specification: string): Promise<DictItem> {
-  await new Promise(r => setTimeout(r, 50));
-  return { uuid: `spec-new-${Date.now()}`, name: specification, normalizedName: specification.toLowerCase(), aliases: [] };
+export async function addSpecificationApi(
+  materialUuid: string,
+  specification: string,
+  options?: { defaultMdUomUuid?: string },
+): Promise<DictItem> {
+  const { itemService } = await import('@/api/services');
+  const raw = await itemService.quickAddSpecification(
+    materialUuid,
+    specification.trim(),
+    options?.defaultMdUomUuid,
+  );
+  const d = raw as Record<string, unknown>;
+  const uuid = String(d.mdSpecificationUuid ?? d.MdSpecificationUuid ?? '');
+  const name = String(d.name ?? d.Name ?? specification).trim();
+  if (!uuid) {
+    throw new Error('quick-add specification: missing mdSpecificationUuid in response');
+  }
+  const normalizedName = removeViDiacritics(name).replace(/\s+/g, ' ').trim().toLowerCase();
+  return { uuid, name, normalizedName, aliases: [] };
 }
 
 export async function addUnitApi(name: string): Promise<DictItem> {

@@ -1,11 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SuggestInputText } from '@/components/SuggestInputText';
 import { QuickAddDialog, type QuickAddType } from '@/components/QuickAddDialog';
 import type { SuggestData } from '@/api/suggestApi';
+import { specificationService } from '@/api/services';
 import type { DictItem } from '@/utils/excelParser';
 import { cn } from '@/lib/utils';
+
+function canonicalSpecLabel(s: string): string {
+  return s.trim().replace(/\s+/g, ' ');
+}
+
+function specLabelsMatch(a: string, b: string): boolean {
+  return canonicalSpecLabel(a).toLowerCase() === canonicalSpecLabel(b).toLowerCase();
+}
 
 interface SuggestInputWithQuickAddProps {
   value: string;
@@ -17,11 +26,18 @@ interface SuggestInputWithQuickAddProps {
   quickAddType: QuickAddType;
   /** Required for specification - the material UUID */
   materialUuid?: string;
+  /** Đơn vị dòng — gửi kèm khi quick-add quy cách (default_md_uom_uuid trên md_item_spec). */
+  defaultMdUomUuid?: string;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
   id?: string;
   minChars?: number;
+  /**
+   * Chỉ dùng khi `type === 'specification'`: sau debounce, nếu tên trùng quy cách trong DB thì gọi với uuid;
+   * không trùng / lỗi / chuỗi ngắn thì gọi với chuỗi rỗng để xóa uuid.
+   */
+  onSpecificationDbUuid?: (uuid: string) => void;
 }
 
 export function SuggestInputWithQuickAdd({
@@ -33,13 +49,51 @@ export function SuggestInputWithQuickAdd({
   type,
   quickAddType,
   materialUuid,
+  defaultMdUomUuid,
   placeholder,
   disabled,
   className,
   id,
   minChars,
+  onSpecificationDbUuid,
 }: SuggestInputWithQuickAddProps) {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const specUuidCbRef = useRef(onSpecificationDbUuid);
+  specUuidCbRef.current = onSpecificationDbUuid;
+  const lastEmittedSpecUuid = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (type !== 'specification' || !specUuidCbRef.current) {
+      lastEmittedSpecUuid.current = undefined;
+      return;
+    }
+    const emit = (u: string) => {
+      if (lastEmittedSpecUuid.current === u) return;
+      lastEmittedSpecUuid.current = u;
+      specUuidCbRef.current!(u);
+    };
+    const t = canonicalSpecLabel(value);
+    if (t.length < 2) {
+      emit('');
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const hit = await specificationService.findByName(t);
+        if (cancelled) return;
+        if (canonicalSpecLabel(value) !== t) return;
+        if (hit && specLabelsMatch(hit.name, t)) emit(hit.uuid);
+        else emit('');
+      } catch {
+        /* Lỗi mạng: không gọi emit('') để tránh tắt xanh oan khi đã chọn/khớp trước đó. */
+      }
+    }, 380);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [value, type]);
 
   const hasValue = value.trim().length > 0;
   const hasUuid = !!selectedUuid;
@@ -81,6 +135,7 @@ export function SuggestInputWithQuickAdd({
         type={quickAddType}
         defaultName={value}
         materialUuid={materialUuid}
+        defaultMdUomUuid={defaultMdUomUuid}
         onAdded={(addType, item) => {
           // Update via onSelect to reuse existing logic
           onSelect({ type: quickAddType, uuid: item.uuid, name: item.name, normalizedName: item.normalizedName, alias: item.aliases });

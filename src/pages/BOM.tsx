@@ -204,6 +204,8 @@ interface FormMaterial {
   materialCode: string;
   materialName: string;
   specification: string;
+  /** UUID md_specification khi tên quy cách đã khớp DB (gợi ý / tra cứu). */
+  mdSpecificationUuid: string;
   unit: string;
   mdUomUuid: string;
   quantity: string;
@@ -228,6 +230,7 @@ const emptyMaterial = (): FormMaterial => ({
   materialCode: '',
   materialName: '',
   specification: '',
+  mdSpecificationUuid: '',
   unit: '',
   mdUomUuid: '',
   quantity: '',
@@ -410,6 +413,7 @@ export default function BOMPage() {
           materialCode: d.mdItemUuid ?? '',
           materialName: d.mdItem?.name ?? d.mdItemAlias?.name ?? '',
           specification: '',
+          mdSpecificationUuid: '',
           unit: d.mdUom?.name ?? d.mdUom?.code ?? '',
           mdUomUuid: d.mdUomUuid ?? '',
           quantity: String(d.qtyPer ?? ''),
@@ -665,6 +669,9 @@ export default function BOMPage() {
       if (field === 'unit') {
         next.mdUomUuid = '';
       }
+      if (field === 'specification') {
+        next.mdSpecificationUuid = '';
+      }
       return next;
     });
   };
@@ -679,6 +686,9 @@ export default function BOMPage() {
       }
       if (field === 'unit') {
         u[index].mdUomUuid = '';
+      }
+      if (field === 'specification') {
+        u[index].mdSpecificationUuid = '';
       }
       return u;
     });
@@ -700,6 +710,10 @@ export default function BOMPage() {
     }
     if (field === 'unit') {
       setDraftMaterial(prev => ({ ...prev, unit: item.name, mdUomUuid: item.uuid }));
+      return;
+    }
+    if (field === 'specification') {
+      setDraftMaterial(prev => ({ ...prev, specification: item.name, mdSpecificationUuid: item.uuid }));
       return;
     }
     setDraftMaterial(prev => ({ ...prev, [field]: item.name }));
@@ -727,6 +741,14 @@ export default function BOMPage() {
       setCommittedMaterials(prev => {
         const u = [...prev];
         u[index] = { ...u[index], unit: item.name, mdUomUuid: item.uuid };
+        return u;
+      });
+      return;
+    }
+    if (field === 'specification') {
+      setCommittedMaterials(prev => {
+        const u = [...prev];
+        u[index] = { ...u[index], specification: item.name, mdSpecificationUuid: item.uuid };
         return u;
       });
       return;
@@ -806,6 +828,7 @@ export default function BOMPage() {
             materialCode: pr.materialUuid,
             materialName: pr.materialName,
             specification: pr.specification,
+            mdSpecificationUuid: '',
             unit: pr.unit,
             mdUomUuid: pr.unitUuid || '',
             quantity: String(pr.quantity),
@@ -1069,10 +1092,20 @@ export default function BOMPage() {
                     </TableCell>
                     <TableCell className="p-1">
                       <SuggestInputWithQuickAdd value={row.specification}
+                        selectedUuid={row.mdSpecificationUuid}
                         onChange={v => handleCommittedMatFieldChange(i, 'specification', v)}
                         onSelect={item => handleCommittedMatSuggestSelect(i, 'specification', item)}
                         type="specification" quickAddType="specification"
                         materialUuid={row.materialCode}
+                        defaultMdUomUuid={row.mdUomUuid}
+                        onSpecificationDbUuid={uuid => {
+                          setCommittedMaterials(prev => {
+                            const u = [...prev];
+                            if (!u[i]) return prev;
+                            u[i] = { ...u[i], mdSpecificationUuid: uuid };
+                            return u;
+                          });
+                        }}
                         placeholder={t('bom.specification')} />
                     </TableCell>
                     <TableCell className="p-1">
@@ -1111,10 +1144,13 @@ export default function BOMPage() {
                   </TableCell>
                   <TableCell className="p-1">
                     <SuggestInputWithQuickAdd value={draftMaterial.specification}
+                      selectedUuid={draftMaterial.mdSpecificationUuid}
                       onChange={v => handleDraftMatFieldChange('specification', v)}
                       onSelect={item => handleDraftMatSuggestSelect('specification', item)}
                       type="specification" quickAddType="specification"
                       materialUuid={draftMaterial.materialCode}
+                      defaultMdUomUuid={draftMaterial.mdUomUuid}
+                      onSpecificationDbUuid={uuid => setDraftMaterial(prev => ({ ...prev, mdSpecificationUuid: uuid }))}
                       placeholder={t('bom.specification')} />
                   </TableCell>
                   <TableCell className="p-1">

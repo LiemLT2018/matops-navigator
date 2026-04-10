@@ -43,6 +43,7 @@ interface FormMaterial {
   /** UoM UUID — bắt buộc khi lưu lên API (CreatePurchaseRequest / UpdatePurchaseRequest). */
   mdUomUuid: string;
   specification: string;
+  mdSpecificationUuid: string;
   unit: string;
   quantity: string;
   manufacturer: string;
@@ -88,6 +89,7 @@ async function detailLinesToFormMaterials(detail: PurchaseRequestDetailData): Pr
         materialUuid: d.mdItemUuid || '',
         mdUomUuid: d.mdUomUuid,
         specification: '',
+        mdSpecificationUuid: '',
         unit: unitLabel,
         quantity: String(d.requestedQty),
         manufacturer: '',
@@ -298,6 +300,9 @@ export default function PurchaseRequestsPage() {
     if (field === 'unit') {
       updated[index].mdUomUuid = '';
     }
+    if (field === 'specification') {
+      updated[index].mdSpecificationUuid = '';
+    }
     setFormMaterials(updated);
   };
 
@@ -332,6 +337,13 @@ export default function PurchaseRequestsPage() {
         ...updated[index],
         unit: item.name,
         mdUomUuid: item.uuid,
+      };
+      setFormMaterials(updated);
+    } else if (field === 'specification') {
+      updated[index] = {
+        ...updated[index],
+        specification: item.name,
+        mdSpecificationUuid: item.uuid,
       };
       setFormMaterials(updated);
     } else {
@@ -394,6 +406,7 @@ export default function PurchaseRequestsPage() {
             materialUuid: pr.materialUuid,
             mdUomUuid: pr.unitUuid,
             specification: pr.specification,
+            mdSpecificationUuid: '',
             unit: pr.unit,
             quantity: String(pr.quantity),
             manufacturer: pr.manufacturer,
@@ -461,6 +474,7 @@ export default function PurchaseRequestsPage() {
               materialUuid: bm.materialUuid,
               mdUomUuid: bm.mdUomUuid,
               specification: bm.specification,
+              mdSpecificationUuid: '',
               unit: bm.unit,
               quantity: String(bm.quantity),
               manufacturer: bm.manufacturer,
@@ -617,10 +631,20 @@ export default function PurchaseRequestsPage() {
                     </TableCell>
                     <TableCell className="p-1">
                       <SuggestInputWithQuickAdd value={row.specification}
+                        selectedUuid={row.mdSpecificationUuid}
                         onChange={v => handleMatFieldChange(i, 'specification', v)}
                         onSelect={item => handleMatSelect(i, 'specification', item)}
                         type="specification" quickAddType="specification"
                         materialUuid={row.materialUuid}
+                        defaultMdUomUuid={row.mdUomUuid}
+                        onSpecificationDbUuid={uuid => {
+                          setFormMaterials(prev => {
+                            const u = [...prev];
+                            if (!u[i]) return prev;
+                            u[i] = { ...u[i], mdSpecificationUuid: uuid };
+                            return u;
+                          });
+                        }}
                         placeholder={t('bom.specification')} />
                     </TableCell>
                     <TableCell className="p-1">

@@ -245,6 +245,14 @@ export const itemCategoryService = {
 // Item — api/Item
 // ============================================================
 
+/** POST api/Item/{uuid}/specifications/quick-add */
+export type QuickAddSpecificationResult = {
+  mdSpecificationUuid: string;
+  name: string;
+  specificationCreated: boolean;
+  itemSpecLinkCreated: boolean;
+};
+
 export const itemService = {
   list: (query?: ItemListQuery) =>
     getList<ItemDetail>('api/Item', query, {
@@ -258,6 +266,48 @@ export const itemService = {
   /** Nối thêm cụm từ tìm kiếm (chuỗi user gõ) vào SearchText của vật tư/sản phẩm — phân tách bằng dấu phẩy, server bỏ trùng. */
   appendSearchPhrase: (uuid: string, phrase: string) =>
     create<ItemDetail>(`api/Item/${uuid}/append-search-phrase`, { phrase }),
+  /**
+   * Thêm nhanh quy cách: upsert md_specification theo tên, rồi đảm bảo liên kết md_item_spec (nhiều–nhiều).
+   * defaultMdUomUuid: đơn vị mặc định của dòng quy cách; bỏ qua thì server dùng MdUom của vật tư.
+   */
+  quickAddSpecification: (itemUuid: string, name: string, defaultMdUomUuid?: string) =>
+    create<QuickAddSpecificationResult>(`api/Item/${itemUuid}/specifications/quick-add`, {
+      name,
+      ...(defaultMdUomUuid ? { defaultMdUomUuid } : {}),
+    }),
+};
+
+// ============================================================
+// MdSpecification — api/MdSpecification
+// ============================================================
+
+export type MdSpecificationLookup = { uuid: string; name: string };
+
+function normalizeMdSpecificationLookup(raw: unknown): MdSpecificationLookup | null {
+  if (raw === null || typeof raw !== 'object') return null;
+  const d = raw as Record<string, unknown>;
+  const uuid = strField(d, 'uuid', 'Uuid');
+  const name = strField(d, 'name', 'Name');
+  if (!uuid) return null;
+  return { uuid, name: name || uuid };
+}
+
+export const specificationService = {
+  /** Trùng tên (trim, không phân biệt hoa thường) với một bản ghi status=1; không có thì null. */
+  findByName: async (name: string): Promise<MdSpecificationLookup | null> => {
+    const t = name.trim();
+    if (!t) return null;
+    const res = await apiClient.get('api/MdSpecification/by-name', { params: { name: t } });
+    return normalizeMdSpecificationLookup(res.data);
+  },
+  search: async (q: string, limit = 50): Promise<MdSpecificationLookup[]> => {
+    const t = q.trim();
+    if (!t) return [];
+    const res = await apiClient.get('api/MdSpecification/search', { params: { q: t, limit } });
+    const raw = res.data;
+    if (!Array.isArray(raw)) return [];
+    return raw.map(normalizeMdSpecificationLookup).filter((x): x is MdSpecificationLookup => x !== null);
+  },
 };
 
 // ============================================================
