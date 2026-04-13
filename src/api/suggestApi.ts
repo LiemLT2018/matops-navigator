@@ -1,7 +1,8 @@
-import { itemService, productBomTemplateService, specificationService } from '@/api/services';
+import { itemService, productBomTemplateService, specificationService, uomService } from '@/api/services';
 import { getAuthUser } from '@/lib/authStorage';
+import { EdTypeFind } from '@/types/models';
 
-// Suggest API — vật tư BOM dùng backend; các loại khác vẫn mock.
+// Suggest API — vật tư BOM, BOM template, item, quy cách, ĐVT (UOM) dùng backend; các loại khác mock.
 
 export interface SuggestData {
   type: string;
@@ -238,6 +239,34 @@ export async function suggestSearch(
         alias: [] as string[],
       }));
       return { type, items, limit, hasMore: items.length >= limit };
+    } catch {
+      // fall through to mock
+    }
+  }
+
+  if (type === 'unit') {
+    try {
+      const res = await uomService.list({
+        pageIndex: 1,
+        pageSize: limit,
+        isPaging: 1,
+        typeFind: EdTypeFind.LIST,
+        keyword: q.trim() || undefined,
+      });
+      const items: SuggestData[] = res.items.map((r) => {
+        const sym = (r.symbol ?? '').trim();
+        const display = `${r.code} — ${r.name}`.trim();
+        const searchBlob = [r.code, r.name, sym].filter(Boolean).join(' ');
+        return {
+          type: 'unit',
+          uuid: r.uuid,
+          name: display,
+          rawText: r.code,
+          normalizedName: removeViDiacritics(searchBlob),
+          alias: [r.code, r.name, sym].filter(Boolean) as string[],
+        };
+      });
+      return { type, items, limit, hasMore: res.pagination.totalCount > items.length };
     } catch {
       // fall through to mock
     }

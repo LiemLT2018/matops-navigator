@@ -19,6 +19,8 @@ import {
   UomCatalog, UomDetail, UomDetailWithUsage, UomCreateBody, UomListQuery,
   ItemCategoryCatalog, ItemCategoryDetail, ItemCategoryCreateBody, ItemCategoryListQuery,
   ItemDetail, ItemCreateBody, ItemListQuery,
+  MdSpecificationDetail,
+  ComputeItemUnitConversionRequest, ComputeItemUnitConversionResult,
   ItemAliasDetail, ItemAliasCreateBody, ItemAliasListQuery,
   PurchaseRequestHeader, PurchaseRequestDetailData, PurchaseRequestCreateBody, PurchaseRequestUpdateBody,
   PurchaseOrderListRow, PurchaseOrderDetailData, PurchaseOrderCreateBody, PurchaseOrderUpdateBody,
@@ -31,6 +33,8 @@ import {
   ProductBomTemplateListQuery, ProductBomTemplateLineListQuery,
   ProductBomTemplateCreateBody,
   ProductBomTemplateLineMutateBody,
+  UserCatalogRow,
+  DepartmentCatalogRow,
   SalesOrderListRow,
   ProductOrderListRow,
   ProductionOrderListRow,
@@ -275,6 +279,8 @@ export const itemService = {
       name,
       ...(defaultMdUomUuid ? { defaultMdUomUuid } : {}),
     }),
+  computeUnitConversion: (body: ComputeItemUnitConversionRequest) =>
+    create<ComputeItemUnitConversionResult>('api/Item/compute-unit-conversion', body),
 };
 
 // ============================================================
@@ -293,6 +299,7 @@ function normalizeMdSpecificationLookup(raw: unknown): MdSpecificationLookup | n
 }
 
 export const specificationService = {
+  getByUuid: (uuid: string) => getDetail<MdSpecificationDetail>(`api/MdSpecification/${uuid}`),
   /** Trùng tên (trim, không phân biệt hoa thường) với một bản ghi status=1; không có thì null. */
   findByName: async (name: string): Promise<MdSpecificationLookup | null> => {
     const t = name.trim();
@@ -324,6 +331,28 @@ export const itemAliasService = {
   create: (body: ItemAliasCreateBody) => create<ItemAliasDetail>('api/ItemAlias', body),
   update: (uuid: string, body: ItemAliasCreateBody) => update<ItemAliasDetail>(`api/ItemAlias/${uuid}`, body),
   delete: (uuid: string) => remove(`api/ItemAlias/${uuid}`),
+};
+
+// ============================================================
+// User — api/User (catalog theo công ty)
+// ============================================================
+
+export const userService = {
+  list: (query?: ListQuery & { mdCompanyUuid?: string }) =>
+    getList<UserCatalogRow>('api/User', query, {
+      mdCompanyUuid: query?.mdCompanyUuid,
+    }),
+};
+
+// ============================================================
+// Department — api/Department (catalog theo công ty)
+// ============================================================
+
+export const departmentService = {
+  list: (query?: ListQuery & { mdCompanyUuid?: string }) =>
+    getList<DepartmentCatalogRow>('api/Department', query, {
+      mdCompanyUuid: query?.mdCompanyUuid,
+    }),
 };
 
 // ============================================================

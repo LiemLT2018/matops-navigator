@@ -94,6 +94,23 @@ export interface ListQuery {
   pageSize?: number;
 }
 
+/** GET api/User — TypeFind CATALOG (danh sách user theo công ty). */
+export interface UserCatalogRow {
+  uuid: string;
+  code: string;
+  name: string;
+  mdCompanyUuid?: string | null;
+  mdDepartmentUuid?: string | null;
+}
+
+/** GET api/Department — TypeFind CATALOG (bộ phận / phòng ban). */
+export interface DepartmentCatalogRow {
+  uuid: string;
+  code: string;
+  name: string;
+  mdCompanyUuid: string;
+}
+
 // ============================================================
 // Company
 // ============================================================
@@ -329,9 +346,41 @@ export interface ItemDetail extends ItemCatalog {
   isStockItem: boolean; isPurchaseItem: boolean;
   createdAt: string; updatedAt: string;
   specification?: string | null;
+  densityKgPerM3?: number | null;
   standardCost?: number | null;
   itemCategory?: ItemNestedCategoryDto | null;
   uom?: ItemNestedUomDto | null;
+}
+
+/** Chi tiết quy cách từ GET api/MdSpecification/{uuid}. */
+export interface MdSpecificationDetail {
+  uuid: string;
+  code?: string | null;
+  name: string;
+  length?: number | null;
+  width?: number | null;
+  thickness?: number | null;
+  dimensionMdUomUuid?: string | null;
+  attributes?: string | null;
+  status: number;
+}
+
+/** POST api/Item/compute-unit-conversion request body. */
+export interface ComputeItemUnitConversionRequest {
+  mdItemUuid: string;
+  mdSpecificationUuid: string;
+  sourceMdUomUuid: string;
+  targetMdUomUuid: string;
+  lengthAxis?: string | null;
+}
+
+/** POST api/Item/compute-unit-conversion response data. */
+export interface ComputeItemUnitConversionResult {
+  massKgPerUnit?: number | null;
+  metersPerUnit?: number | null;
+  conversionFactor?: number | null;
+  ok: boolean;
+  errorKey?: string | null;
 }
 
 /** Khớp `CreateItemCommand` / `UpdateItemCommand` (POST/PUT api/Item). */
