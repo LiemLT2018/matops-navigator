@@ -39,6 +39,7 @@ import {
   ProductOrderListRow,
   ProductionOrderListRow,
 } from '@/types/models';
+export type { SalesOrderListRow, ProductOrderListRow, ProductionOrderListRow };
 import { normalizeInventoryBalanceItem } from '@/utils/inventoryBalanceRow';
 import {
   getDashboardKPI,
