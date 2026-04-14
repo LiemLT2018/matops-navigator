@@ -464,6 +464,11 @@ export interface PurchaseRequestLine {
   uuid: string;
   mdItemUuid: string | null;
   mdUomUuid: string;
+  /** Ký hiệu ĐVT (API: symbol hoặc code). */
+  mdUomSymbol?: string | null;
+  mdProductBomTemplateLineUuid?: string | null;
+  mdSpecificationUuid?: string | null;
+  mdSpecificationName?: string | null;
   lineNo: number;
   name: string;
   requestedQty: number;
@@ -500,8 +505,11 @@ export interface PurchaseRequestLineBody {
   name: string;
   mdUomUuid: string;
   requestedQty: number;
+  orderedQty: number;
   neededDate?: string | null;
   remark?: string | null;
+  mdProductBomTemplateLineUuid?: string | null;
+  mdSpecificationUuid?: string | null;
 }
 
 // ============================================================

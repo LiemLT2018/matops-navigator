@@ -57,9 +57,9 @@ interface FormMaterial {
   specification: string;
   mdSpecificationUuid: string;
   unit: string;
-  /** SL định mức ghi nhận khi nhập từ BOM (hiển thị; có thể khác SL cần mua). */
+  /** SL yêu cầu (BOM / định mức) — map `requestedQty` khi lưu API. */
   bomQtyPer: string;
-  /** Số lượng cần mua — map `requestedQty` khi lưu API. */
+  /** Số lượng order — map `orderedQty` khi lưu API. */
   quantity: string;
   manufacturer: string;
   estimatedPrice: string;
@@ -79,6 +79,8 @@ interface FormMaterial {
   conversionFactor?: number | null;
   /** Khóa ổn định theo ĐVT BOM để trừ layer / gộp dòng import BOM (không đổi khi đổi ĐVT quy đổi). */
   bomFlatKey?: string;
+  /** Dòng template BOM (khi nhập từ BOM) — gửi lên API để truy vết. */
+  mdProductBomTemplateLineUuid?: string;
   /** `MdUom.Type` (0=QTY, 1=LENGTH, …) — ĐVT BOM. */
   bomUomKind?: number;
   /** `MdUom.Type` — ĐVT quy đổi. */
@@ -244,6 +246,7 @@ interface BomFlatRow {
   manufacturer: string;
   estimatedPrice: number;
   qty: number;
+  mdProductBomTemplateLineUuid?: string;
 }
 
 function lineToFlatRow(l: ProductBomTemplateLineListRow, qtyScale: number): BomFlatRow {
@@ -260,6 +263,7 @@ function lineToFlatRow(l: ProductBomTemplateLineListRow, qtyScale: number): BomF
     manufacturer: '',
     estimatedPrice: 0,
     qty: q,
+    mdProductBomTemplateLineUuid: l.uuid || undefined,
   };
 }
 
@@ -289,8 +293,20 @@ async function collectBomFlattenedRows(rootTemplateUuid: string): Promise<BomFla
     if (!row.mdUomUuid) return;
     const k = bomFlatMergeKey(row);
     const ex = map.get(k);
-    if (ex) ex.qty += row.qty;
-    else map.set(k, { ...row });
+    if (ex) {
+      ex.qty += row.qty;
+      if (
+        ex.mdProductBomTemplateLineUuid &&
+        row.mdProductBomTemplateLineUuid &&
+        ex.mdProductBomTemplateLineUuid !== row.mdProductBomTemplateLineUuid
+      ) {
+        ex.mdProductBomTemplateLineUuid = undefined;
+      } else if (!ex.mdProductBomTemplateLineUuid && row.mdProductBomTemplateLineUuid) {
+        ex.mdProductBomTemplateLineUuid = row.mdProductBomTemplateLineUuid;
+      }
+    } else {
+      map.set(k, { ...row });
+    }
   };
 
   const addTemplateLines = async (templateUuid: string, mult: number) => {
@@ -341,7 +357,10 @@ const emptyMaterial = (): FormMaterial => ({
   convertMdUomUuid: '', convertUnitLabel: '',
 });
 
-async function detailLinesToFormMaterials(detail: PurchaseRequestDetailData): Promise<FormMaterial[]> {
+async function detailLinesToFormMaterials(
+  detail: PurchaseRequestDetailData,
+  specLabel: string,
+): Promise<FormMaterial[]> {
   if (!detail.lines?.length) return [emptyMaterial()];
   const mapped = await Promise.all(
     detail.lines.map(async (d) => {
@@ -354,23 +373,38 @@ async function detailLinesToFormMaterials(detail: PurchaseRequestDetailData): Pr
           unitLabel = `${d.mdUomUuid.slice(0, 8)}…`;
         }
       }
+      const parsed = splitPrLineRemark(d.remark, specLabel);
+      const apiSpecUuid = d.mdSpecificationUuid?.trim() ?? '';
+      const apiSpecName = (d.mdSpecificationName ?? '').trim();
+      let specification = '';
+      let mdSpecificationUuid = '';
+      let note = d.remark || '';
+      if (apiSpecUuid) {
+        mdSpecificationUuid = apiSpecUuid;
+        specification = apiSpecName || (parsed.spec !== '—' ? parsed.spec : '');
+        note = parsed.rest;
+      } else {
+        specification = parsed.spec !== '—' ? parsed.spec : '';
+        note = parsed.rest;
+      }
       return {
         _key: crypto.randomUUID(),
         materialCode: d.mdItemUuid || '',
         materialName: d.name,
         materialUuid: d.mdItemUuid || '',
         mdUomUuid: d.mdUomUuid,
-        specification: '',
-        mdSpecificationUuid: '',
+        specification,
+        mdSpecificationUuid,
         unit: unitLabel,
-        bomQtyPer: '',
-        quantity: String(d.requestedQty),
+        bomQtyPer: String(d.requestedQty),
+        quantity: String(d.orderedQty),
         manufacturer: '',
         estimatedPrice: '',
         stockQty: null,
         lastSupplier: '',
         lastPrice: null,
-        note: d.remark || '',
+        note,
+        mdProductBomTemplateLineUuid: d.mdProductBomTemplateLineUuid ?? undefined,
       } satisfies FormMaterial;
     }),
   );
@@ -564,7 +598,7 @@ export default function PurchaseRequestsPage() {
     setBomRefsDialogOpen(false);
     try {
       const detail = await purchaseRequestService.get(row.uuid);
-      setFormMaterials(await detailLinesToFormMaterials(detail));
+      setFormMaterials(await detailLinesToFormMaterials(detail, t('bom.specification')));
     } catch (e) {
       setFormMaterials([emptyMaterial()]);
       if (e instanceof MatOpsApiError) {
@@ -612,7 +646,7 @@ export default function PurchaseRequestsPage() {
     setBomRefsDialogOpen(false);
     try {
       const detail = await purchaseRequestService.get(row.uuid);
-      setFormMaterials(await detailLinesToFormMaterials(detail));
+      setFormMaterials(await detailLinesToFormMaterials(detail, t('bom.specification')));
       setShowForm(true);
     } catch (e) {
       if (e instanceof MatOpsApiError) {
@@ -635,21 +669,30 @@ export default function PurchaseRequestsPage() {
       toast.error(t('errors.missingCompany'));
       return;
     }
+    const wasCreate = !editingPR;
+    const parseQty = (s: string) => {
+      const n = Number(String(s).trim());
+      return Number.isFinite(n) ? n : Number.NaN;
+    };
     const lines = formMaterials
       .filter(r => r.materialName.trim() && r.quantity.trim())
       .map(r => {
-        const specLine = r.specification.trim()
-          ? `${t('bom.specification')}: ${r.specification.trim()}`
-          : '';
         const noteLine = r.note.trim();
-        const lineRemark = [specLine, noteLine].filter(Boolean).join('\n') || null;
+        const lineRemark = noteLine || null;
+        const orderedQty = parseQty(r.quantity);
+        const fromBom = parseQty(r.bomQtyPer);
+        const requestedQty =
+          !Number.isNaN(fromBom) && fromBom > 0 ? fromBom : orderedQty;
         return {
           mdItemUuid: r.materialUuid.trim() ? r.materialUuid.trim() : null,
           name: r.materialName.trim(),
           mdUomUuid: r.mdUomUuid.trim(),
-          requestedQty: Number(r.quantity),
+          requestedQty,
+          orderedQty,
           neededDate: null as string | null,
           remark: lineRemark,
+          mdProductBomTemplateLineUuid: r.mdProductBomTemplateLineUuid?.trim() || null,
+          mdSpecificationUuid: r.mdSpecificationUuid.trim() || null,
         };
       });
     if (lines.length === 0) {
@@ -657,7 +700,9 @@ export default function PurchaseRequestsPage() {
       return;
     }
     const invalid = lines.some(
-      l => !l.mdUomUuid || !Number.isFinite(l.requestedQty) || l.requestedQty <= 0,
+      l => !l.mdUomUuid
+        || !Number.isFinite(l.requestedQty) || l.requestedQty <= 0
+        || !Number.isFinite(l.orderedQty) || l.orderedQty < 0,
     );
     if (invalid) {
       toast.warning(t('purchasing.request.selectUom'));
@@ -702,6 +747,9 @@ export default function PurchaseRequestsPage() {
       }
       setShowForm(false);
       setEditingPR(null);
+      setPrItems({});
+      setExpandedId(null);
+      if (wasCreate) setPage(1);
       await loadData();
     } catch (e) {
       if (e instanceof MatOpsApiError) {
@@ -747,6 +795,9 @@ export default function PurchaseRequestsPage() {
       updated[index].convertUomKind = undefined;
       updated[index].conversionFactor = null;
       updated[index].lengthAxis = undefined;
+      updated[index].mdProductBomTemplateLineUuid = undefined;
+      updated[index].specification = '';
+      updated[index].mdSpecificationUuid = '';
     }
     if (field === 'unit') {
       updated[index].mdUomUuid = '';
@@ -778,6 +829,9 @@ export default function PurchaseRequestsPage() {
         conversionFactor: null,
         lengthAxis: undefined,
         bomQtyPer: '',
+        mdProductBomTemplateLineUuid: undefined,
+        specification: '',
+        mdSpecificationUuid: '',
         ...(item.mdUomUuid
           ? { mdUomUuid: item.mdUomUuid, unit: item.unitName ?? updated[index].unit }
           : {}),
@@ -861,13 +915,16 @@ export default function PurchaseRequestsPage() {
           const existing = current[existIdx];
           const newQty = Number(existing.quantity || 0) + pr.quantity;
           const price = Number(existing.estimatedPrice) || 0;
+          const qStr = String(newQty);
           current[existIdx] = {
             ...existing,
-            quantity: String(newQty),
+            quantity: qStr,
+            bomQtyPer: qStr,
             estimatedPrice: String(price),
             mdUomUuid: pr.unitUuid || existing.mdUomUuid,
           };
         } else {
+          const q = String(pr.quantity);
           current.push({
             _key: crypto.randomUUID(),
             materialCode: pr.materialUuid,
@@ -877,8 +934,8 @@ export default function PurchaseRequestsPage() {
             specification: pr.specification,
             mdSpecificationUuid: '',
             unit: pr.unit,
-            bomQtyPer: '',
-            quantity: String(pr.quantity),
+            bomQtyPer: q,
+            quantity: q,
             manufacturer: pr.manufacturer,
             estimatedPrice: '',
             stockQty: null,
@@ -914,8 +971,20 @@ export default function PurchaseRequestsPage() {
         if (!bm.mdUomUuid) continue;
         const k = bomFlatMergeKey(bm);
         const ex = contributions.get(k);
-        if (ex) ex.qty += bm.qty;
-        else contributions.set(k, { ...bm });
+        if (ex) {
+          ex.qty += bm.qty;
+          if (
+            ex.mdProductBomTemplateLineUuid &&
+            bm.mdProductBomTemplateLineUuid &&
+            ex.mdProductBomTemplateLineUuid !== bm.mdProductBomTemplateLineUuid
+          ) {
+            ex.mdProductBomTemplateLineUuid = undefined;
+          } else if (!ex.mdProductBomTemplateLineUuid && bm.mdProductBomTemplateLineUuid) {
+            ex.mdProductBomTemplateLineUuid = bm.mdProductBomTemplateLineUuid;
+          }
+        } else {
+          contributions.set(k, { ...bm });
+        }
       }
 
       const uomTypeMap = new Map<string, number>();
@@ -955,6 +1024,11 @@ export default function PurchaseRequestsPage() {
               const newQty = Number(existing.quantity || 0) + bm.qty;
               quantityStr = String(newQty);
             }
+            const prevTpl = existing.mdProductBomTemplateLineUuid;
+            const incTpl = bm.mdProductBomTemplateLineUuid;
+            let mergedTpl = prevTpl;
+            if (prevTpl && incTpl && prevTpl !== incTpl) mergedTpl = undefined;
+            else if (!prevTpl && incTpl) mergedTpl = incTpl;
             current[existIdx] = {
               ...existing,
               quantity: quantityStr,
@@ -964,6 +1038,7 @@ export default function PurchaseRequestsPage() {
               specification: existing.specification || bm.specification,
               mdSpecificationUuid: existing.mdSpecificationUuid || bm.mdSpecificationUuid,
               bomUomKind: bomKind ?? existing.bomUomKind,
+              mdProductBomTemplateLineUuid: mergedTpl,
             };
           } else {
             current.push({
@@ -991,6 +1066,7 @@ export default function PurchaseRequestsPage() {
               bomUomKind: bomKind,
               convertUomKind: bomKind,
               lengthAxis: 'length',
+              mdProductBomTemplateLineUuid: bm.mdProductBomTemplateLineUuid,
             });
           }
         }
@@ -1210,8 +1286,8 @@ export default function PurchaseRequestsPage() {
               <TableHead>{t('bom.materialName')}</TableHead>
               <TableHead>{t('bom.specification')}</TableHead>
               <TableHead>{t('bom.unit')}</TableHead>
-              <TableHead className="text-right">{t('purchasing.request.qtyNeeded')}</TableHead>
-              <TableHead className="text-right">Ordered</TableHead>
+              <TableHead className="text-right">{t('purchasing.request.qtyRequested')}</TableHead>
+              <TableHead className="text-right">{t('purchasing.request.qtyOrder')}</TableHead>
               <TableHead>{t('common.status')}</TableHead>
               <TableHead>{t('bom.note')}</TableHead>
             </TableRow>
@@ -1219,12 +1295,14 @@ export default function PurchaseRequestsPage() {
           <TableBody>
             {items.map((d) => {
               const { spec, rest } = splitPrLineRemark(d.remark, specLbl);
+              const specDisplay = (d.mdSpecificationName?.trim())
+                || (spec !== '—' ? spec : '—');
               return (
                 <TableRow key={d.uuid}>
                   <TableCell className="font-mono text-sm">{d.lineNo}</TableCell>
                   <TableCell>{d.name || (d.mdItemUuid ? <span className="font-mono text-xs">{d.mdItemUuid.slice(0, 8)}…</span> : '—')}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{spec}</TableCell>
-                  <TableCell className="font-mono text-xs">{d.mdUomUuid.slice(0, 8)}…</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{specDisplay}</TableCell>
+                  <TableCell className="text-sm">{d.mdUomSymbol?.trim() || '—'}</TableCell>
                   <TableCell className="text-right font-mono"><NumberDisplay value={d.requestedQty} /></TableCell>
                   <TableCell className="text-right font-mono"><NumberDisplay value={d.orderedQty} /></TableCell>
                   <TableCell><StatusBadge status={d.status === 0 ? 'open' : 'closed'} /></TableCell>
